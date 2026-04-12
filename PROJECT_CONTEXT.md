@@ -153,7 +153,7 @@ motor_turns = joint_turns × 16
 
 ## Project Status
 
-### Current Status: 🚧 Single Motor + Encoder Integration
+### Current Status: 🚧 Encoder Implementation Complete, Motor Test Pending
 
 - [x] Project structure created
 - [x] All Python modules implemented
@@ -165,8 +165,9 @@ motor_turns = joint_turns × 16
 - [x] Code copied from USB (odrive_smapy)
 - [x] Test script created
 - [ ] Test single motor with ODrive
-- [ ] Add I2C mux + AS5600 code
-- [ ] Integrate encoder reading with motor control
+- [x] I2C mux + AS5600 code implemented ✅
+- [ ] Test encoder reading
+- [ ] Integrate encoder with motor control
 
 ### Components Status
 
@@ -182,13 +183,17 @@ motor_turns = joint_turns × 16
 | Motor Calibration | ✅ | Script ready |
 | Single Motor Test | ✅ | Script ready |
 | Unit Tests | ✅ | Kinematics tests |
-| AS5600 Reader | ❌ | Need to implement |
-| I2C Mux Driver | ❌ | Need to implement |
-| Encoder Integration | ❌ | Need to implement |
+| EncoderInterface (Base) | ✅ | Abstract base class |
+| TCA9548A Driver | ✅ | I2C mux helper |
+| PiAS5600Encoder | ✅ | Pi I2C implementation |
+| SerialEncoder | ✅ | Placeholder for future |
+| EncoderManager | ✅ | Factory for multiple encoders |
+| Encoder Config | ✅ | YAML configuration |
+| Encoder Test Script | ✅ | scripts/test_encoders.py |
 
 ---
 
-## Files Created (30+ files)
+## Files Created (35+ files)
 
 ```
 tfg_biped_leg/
@@ -205,7 +210,8 @@ tfg_biped_leg/
 │   ├── hip.yaml               # Hip joint config
 │   ├── knee.yaml              # Knee joint config
 │   ├── ankle.yaml             # Ankle joint config
-│   └── my_config.json         # D5065 motor config
+│   ├── my_config.json         # D5065 motor config
+│   └── encoder.yaml           # AS5600 encoder config (NEW)
 │
 ├── launch/                     # ROS2 launch files
 │   └── bringup.launch.py      # Main bringup launch
@@ -223,19 +229,23 @@ tfg_biped_leg/
 │   ├── odrive_enums.py        # ODrive enums (from odrive_smapy)
 │   ├── odrive_driver.py       # ODrive USB communication
 │   ├── leg_kinematics.py      # FK/IK for 3-DOF leg
-│   ├── leg_controller.py       # ROS2 controller node
+│   ├── leg_controller.py      # ROS2 controller node
 │   └── trajectory_generator.py # Walking gait patterns
 │
 ├── scripts/                    # Utility scripts
 │   ├── calibrate_motors.py    # Motor calibration
 │   ├── test_leg.py           # Basic leg testing
 │   ├── test_single_motor.py  # Single motor test
+│   ├── test_encoders.py      # Encoder test (NEW)
 │   └── odrive_hw_interface.py # Hardware interface (from odrive_smapy)
 │
-├── src/                       # NEW: Low-level drivers
-│   ├── __init__.py
-│   ├── as5600_encoder.py     # TODO: AS5600 driver
-│   └── i2c_mux.py            # TODO: TCA9548A driver
+├── src/                       # Low-level drivers
+│   ├── __init__.py           # Package init (NEW)
+│   ├── encoder_interface.py   # Abstract base class (NEW)
+│   ├── tca9548a.py           # TCA9548A driver (NEW)
+│   ├── pi_as5600_encoder.py  # Pi AS5600 implementation (NEW)
+│   ├── serial_encoder.py      # Serial placeholder for future (NEW)
+│   └── encoder_manager.py     # Multi-encoder manager (NEW)
 │
 ├── tests/                     # Unit tests
 │   └── test_kinematics.py
@@ -249,12 +259,99 @@ tfg_biped_leg/
 
 ---
 
+## Encoder Architecture
+
+### Modular Design (Pi or Microcontroller)
+
+The encoder system uses an abstraction layer that allows switching between implementations without rewriting high-level code:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    leg_controller.py                          │
+│                  (Uses EncoderInterface)                      │
+│                                                              │
+│   get_joint_angle() ───────▶ encoder.read_angle()           │
+│   set_zero()         ───────▶ encoder.zero()               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+              ▼               ▼               ▼
+      ┌────────────┐  ┌────────────┐  ┌────────────┐
+      │PiAS5600   │  │SerialEnc  │  │CANEncoder │
+      │ Encoder   │  │ (Future)  │  │ (Future)  │
+      │ (I2C/Mux) │  │ (UART)    │  │           │
+      └────────────┘  └────────────┘  └────────────┘
+```
+
+### Current Implementation (Pi I2C)
+
+```
+Raspberry Pi        TCA9548A Mux       AS5600 Encoders
+     │                    │                   │
+     │ I2C (SDA/SCL)     │                   │
+     │───────────────────▶│ Channel 0 ────────▶│ Hip Encoder
+     │                    │ Channel 1 ────────▶│ Knee Encoder
+     │                    │ Channel 2 ────────▶│ Ankle Encoder
+```
+
+### Future: Microcontroller (Serial)
+
+```
+Microcontroller        Raspberry Pi        ODrive
+     │                    │                   │
+     │ I2C (own)         │                   │
+     │──────▶ AS5600s     │ Serial            │ USB
+     │                    │──────▶ ODrive ◀───┘
+     │                    │
+     │ Position Data      │
+     └────────────────────┘
+```
+
+### Usage Example
+
+```python
+# Current (Pi)
+from src import EncoderManager
+
+manager = EncoderManager(encoder_type='pi', config={
+    'hip': {'channel': 0},
+    'knee': {'channel': 1},
+    'ankle': {'channel': 2}
+})
+angles = manager.read_all()
+
+# Future (Microcontroller) - just change config
+manager = EncoderManager(encoder_type='serial', config={
+    'hip': {'port': '/dev/ttyUSB0'},
+    ...
+})
+```
+
+### Test Commands
+
+```bash
+# Scan I2C bus
+python3 scripts/test_encoders.py --scan
+
+# Test TCA9548A
+python3 scripts/test_encoders.py --mux
+
+# Test all encoders
+python3 scripts/test_encoders.py --encoders
+
+# Continuous read (10 seconds)
+python3 scripts/test_encoders.py --continuous 10
+```
+
+---
+
 ## TODO
 
 ### High Priority
 - [ ] Test single motor with official ODrive v3.6
-- [ ] Add I2C mux driver (TCA9548A)
-- [ ] Add AS5600 encoder driver
+- [x] I2C mux driver (TCA9548A) ✅
+- [x] AS5600 encoder driver ✅
 - [ ] Test encoder reading
 - [ ] Integrate encoder with motor control
 - [ ] Test Chinese ODrive clone (M1 M22015)
@@ -269,6 +366,7 @@ tfg_biped_leg/
 - [ ] Create walking gait trajectories
 - [ ] Test leg movement
 - [ ] Expand to 2-leg (bipedal) configuration
+- [ ] Switch to microcontroller (SerialEncoder placeholder ready)
 - [ ] Clone private odrive_smapy repo
 
 ---
@@ -374,4 +472,17 @@ All AS5600 encoders share address **0x36**. Must use TCA9548A I2C multiplexer to
 - Added I2C setup instructions
 - Added joint definitions with gearbox conversion
 - Updated TODO list with encoder integration tasks
-- Added source directory structure for new drivers
+  - Added source directory structure for new drivers
+
+### 2026-04-12 (Encoder Implementation)
+- Modular encoder architecture implemented:
+  - encoder_interface.py: Abstract base class
+  - tca9548a.py: TCA9548A I2C multiplexer driver
+  - pi_as5600_encoder.py: Pi I2C implementation
+  - serial_encoder.py: Serial placeholder for future microcontroller
+  - encoder_manager.py: Factory for multiple encoders
+  - encoder.yaml: Configuration file
+  - test_encoders.py: Test script
+- Abstraction layer allows switching between Pi and microcontroller
+- Error handling: EncoderError, EncoderTimeoutError, EncoderNotFoundError
+- ROS2 compatible: EncoderManager integrates with leg_controller

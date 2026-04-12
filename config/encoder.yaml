@@ -1,0 +1,64 @@
+# Encoder Configuration
+# 
+# This file configures the AS5600 magnetic encoders connected
+# via TCA9548A I2C multiplexer.
+#
+# Hardware Setup:
+#   - TCA9548A I2C Mux: Address 0x70 (default)
+#   - AS5600 Encoders: Address 0x36 (all encoders share this address)
+#   - Each encoder connected to a different mux channel
+#
+# Connection:
+#   - Channel 0: Hip encoder
+#   - Channel 1: Knee encoder
+#   - Channel 2: Ankle encoder
+
+# Current Implementation (Pi I2C)
+pi_i2c:
+  # I2C bus number (1 for Raspberry Pi)
+  bus: 1
+  
+  # TCA9548A multiplexer address
+  mux_address: 0x70
+  
+  # Joint configurations
+  joints:
+    hip:
+      channel: 0      # TCA9548A channel for hip encoder
+      name: "Hip Joint"
+      
+    knee:
+      channel: 1      # TCA9548A channel for knee encoder
+      name: "Knee Joint"
+      
+    ankle:
+      channel: 2      # TCA9548A channel for ankle encoder
+      name: "Ankle Joint"
+
+# Future Implementation (Microcontroller Serial)
+# Uncomment when switching to microcontroller-based encoder reading
+#
+# serial:
+#   # Serial port
+#   port: /dev/ttyUSB0
+#   baud: 115200
+#   timeout: 1.0
+#   
+#   # Joint configurations
+#   joints:
+#     hip:
+#       name: "Hip Joint"
+#     knee:
+#       name: "Knee Joint"
+#     ankle:
+#       name: "Ankle Joint"
+
+# Encoder Specifications (AS5600)
+specifications:
+  type: "AS5600"
+  resolution_bits: 12
+  max_raw_value: 4096  # 2^12
+  i2c_address: "0x36"  # Fixed address
+  magnet:
+    required: true
+    status_check: true
