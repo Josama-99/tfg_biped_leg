@@ -4,3 +4,5 @@ rclpy
 geometry_msgs
 std_msgs
 sensor_msgs
+smbus2>=0.4.0
+pyyaml>=6.0

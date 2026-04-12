@@ -1,6 +1,6 @@
 # Project Context - tfg_biped_leg
 
-**Last Updated**: 2026-04-12
+**Last Updated**: 2026-04-12 (Encoder Implementation Complete)
 
 ## Project Overview
 
@@ -400,13 +400,16 @@ sudo i2cdetect -y 1
 All AS5600 encoders share address **0x36**. Must use TCA9548A I2C multiplexer to read multiple encoders.
 
 ### First Use Checklist
-1. [ ] Set ODrive USB permissions
-2. [ ] Enable I2C on Pi
-3. [ ] Connect TCA9548A and verify with `i2cdetect`
-4. [ ] Connect AS5600 encoders to mux channels
-5. [ ] Run motor calibration
-6. [ ] Test encoder reading
-7. [ ] Verify closed-loop control
+1. [x] Project setup (code downloaded)
+2. [ ] Set ODrive USB permissions (`sudo chmod 666 /dev/ttyACM0`)
+3. [ ] Enable I2C on Pi (`sudo raspi-config` → Interface → I2C)
+4. [ ] Install dependencies (`pip install smbus2 pyyaml odrive numpy`)
+5. [ ] Connect TCA9548A and verify with `sudo i2cdetect -y 1`
+6. [ ] Connect AS5600 encoders to mux channels (0=Hip, 1=Knee, 2=Ankle)
+7. [ ] Test encoder reading (`python3 scripts/test_encoders.py`)
+8. [ ] Run motor calibration (`python3 scripts/calibrate_motors.py`)
+9. [ ] Test single motor (`python3 scripts/test_single_motor.py`)
+10. [ ] Integrate encoder feedback with motor control
 
 ---
 
