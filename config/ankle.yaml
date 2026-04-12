@@ -1,0 +1,26 @@
+odrive:
+  axis: 2
+  joint_name: ankle
+  
+motor:
+  motor_type: 0
+  poles: 12
+  current_lim: 15.0
+  torque_constant: 8.27
+  
+encoder:
+  encoder_type: 1
+  cpr: 8192
+  offset: 0
+  direction: 1
+  
+controller:
+  pos_gain: 100.0
+  vel_gain: 0.5
+  vel_integrator_gain: 0.0
+  vel_limit: 10000.0
+  
+limits:
+  vel_limit: 80.0
+  accel_limit: 40.0
+  calib_range: 0.05

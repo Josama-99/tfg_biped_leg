@@ -1,0 +1,6 @@
+odrive>=0.6.0
+numpy>=1.21.0
+rclpy
+geometry_msgs
+std_msgs
+sensor_msgs
