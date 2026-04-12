@@ -6,8 +6,8 @@
 
 - **Project Name**: tfg_biped_leg
 - **Purpose**: Control a bipedal robot leg using ODrive motor controllers
-- **Type**: Single leg prototype (expandable to full bipedal robot)
-- **Hardware**: Raspberry Pi + ODrive v3.6 + D5065 Motor
+- **Type**: Single leg prototype (3-DOF, expandable to full bipedal robot)
+- **Hardware**: Raspberry Pi + ODrive v3.6 + AS5600 Encoders + TCA9548A Mux
 
 ## GitHub Repository
 
@@ -17,143 +17,300 @@
 | **Repo URL** | https://github.com/Josama-99/tfg_biped_leg |
 | **Status** | ✅ Pushed to GitHub |
 
+---
+
+## Architecture
+
+### Selected Architecture: Pi-Only with I2C Multiplexer
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Raspberry Pi                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐ │
+│  │ ODrive USB   │  │ I2C Mux      │  │ Control Logic            │ │
+│  │ (Motor Ctrl) │  │ (Encoders)   │  │ (Position Commands)      │ │
+│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────────┘ │
+└─────────┼──────────────────┼────────────────────┼──────────────────┘
+          │                  │                    │
+          ▼                  ▼                    │
+    ┌──────────┐      ┌──────────┐                │
+    │ ODrive   │      │TCA9548A  │                │
+    │ v3.6     │      │I2C Mux   │◄───────────────┘
+    └────┬─────┘      └────┬─────┘
+         │                 │
+         ▼                 ▼
+    ┌──────────┐     ┌──────────┬──────────┬──────────┐
+    │ D5065    │     │ AS5600   │ AS5600   │ AS5600   │
+    │ Motor    │     │ (Hip)    │ (Knee)   │ (Ankle)  │
+    └──────────┘     └──────────┴──────────┴──────────┘
+```
+
+### Control Stack
+
+| Level | Component | Purpose |
+|-------|-----------|---------|
+| 1 | ODrive v3.6 | Closed-loop motor control (current, velocity, position) |
+| 2 | USB | Communication Pi → ODrive |
+| 3 | Raspberry Pi | High-level control, kinematics, trajectories |
+| 4 | TCA9548A | I2C multiplexer for 3 encoders |
+| 5 | AS5600 ×3 | Joint position sensing (after gearbox) |
+
+### Why This Architecture?
+
+- **Simple**: No extra microcontroller needed
+- **Robust**: ODrive handles real-time motor control
+- **Scalable**: Easy to add more ODrives for full robot
+- **Tested**: Based on odrive_smapy approach
+
+---
+
 ## Key Decisions
 
-| Decision | Value | Date |
-|----------|-------|------|
-| Project Name | tfg_biped_leg | 2026-04-12 |
-| Robot Type | Single leg prototype | 2026-04-12 |
-| Motors per Leg | 3-DOF (hip, knee, ankle) | 2026-04-12 |
-| ODrive Model | ODrive v3.6 (Official) | 2026-04-12 |
-| Programming Language | Python + ROS2 | 2026-04-12 |
-| Communication | USB | 2026-04-12 |
-| GitHub Setup | SSH keys | 2026-04-12 |
+| Decision | Value | Date | Notes |
+|----------|-------|------|-------|
+| Project Name | tfg_biped_leg | 2026-04-12 | |
+| Robot Type | Single leg prototype | 2026-04-12 | Expandable to bipedal |
+| Motors per Leg | 3-DOF | 2026-04-12 | Hip, knee, ankle |
+| ODrive Model | Official v3.6 | 2026-04-12 | + Clone for future |
+| Encoder Type | AS5600 | 2026-04-12 | Magnetic, 12-bit |
+| I2C Mux | TCA9548A | 2026-04-12 | Needed for 3 encoders |
+| Control Method | Pi direct | 2026-04-12 | No Teensy |
+| Communication | USB (ODrive) + I2C (Encoders) | 2026-04-12 | |
+| Programming | Python | 2026-04-12 | + ROS2 structure |
 
-## Project Status
-
-### Current Status: 🚧 Single Motor Testing Phase
-
-- [x] Project structure created
-- [x] All Python modules implemented
-- [x] ROS2 integration complete
-- [x] Initial commit created (25 files)
-- [x] Git repository initialized
-- [x] SSH key setup ✅
-- [x] Push to GitHub ✅
-- [x] Code copied from USB (odrive_smapy) ✅
-- [x] Test script created ✅
-- [ ] Test single motor (pending)
-- [ ] Clone private odrive_smapy repo
-
-### Last Changes (2026-04-12)
-
-1. **Project initialized** - Created complete ROS2 package structure
-2. **Files created**:
-   - ODrive driver with USB communication
-   - Forward/inverse kinematics for 3-DOF leg
-   - Trajectory generator for walking gait
-   - Motor calibration scripts
-   - Unit tests for kinematics
-   - Configuration files for hip, knee, ankle joints
-3. **Git initialized** - Initial commit `cf37496`
-4. **GitHub repo created** - https://github.com/Josama-99/tfg_biped_leg
-5. **GitHub push complete** - All files pushed
-6. **Code copied from USB** - odrive_smapy motor control code integrated
-7. **Test script created** - scripts/test_single_motor.py ready
-
-## Implementation Summary
-
-### Files Created (25+ files)
-
-```
-tfg_biped_leg/
-├── PROJECT_CONTEXT.md      # AI memory - LAST UPDATED 2026-04-12
-├── README.md               # Project documentation
-├── LICENSE                 # MIT license
-├── requirements.txt        # Python dependencies
-├── .gitignore              # Git ignore patterns
-├── package.xml             # ROS2 package manifest
-├── setup.py                # Python package setup
-├── setup.cfg               # Package config
-├── config/                 # Motor configurations
-│   ├── hip.yaml            # Hip joint config
-│   ├── knee.yaml           # Knee joint config
-│   ├── ankle.yaml          # Ankle joint config
-│   └── my_config.json      # D5065 motor config (from odrive_smapy)
-├── launch/                 # ROS2 launch files
-│   └── bringup.launch.py   # Main bringup launch
-├── msg/                    # ROS2 message definitions
-│   ├── JointAngles.msg     # Joint angles message
-│   └── LegPose.msg         # Leg pose message
-├── srv/                    # ROS2 service definitions
-│   └── LegCommand.srv      # Leg command service
-├── tfg_biped_leg/          # Main Python package
-│   ├── __init__.py
-│   ├── odrive_interface.py  # IOdrive class (from odrive_smapy)
-│   ├── odrive_enums.py     # ODrive enums (from odrive_smapy)
-│   ├── odrive_driver.py    # ODrive USB communication
-│   ├── leg_kinematics.py   # FK/IK for 3-DOF leg
-│   ├── leg_controller.py   # ROS2 controller node
-│   └── trajectory_generator.py
-├── scripts/                # Utility scripts
-│   ├── calibrate_motors.py # Motor calibration
-│   ├── test_leg.py        # Basic leg testing
-│   ├── test_single_motor.py # Single motor test (NEW)
-│   └── odrive_hw_interface.py # Hardware interface (from odrive_smapy)
-├── tests/                  # Unit tests
-│   └── test_kinematics.py
-├── external/               # Git submodule placeholder
-│   └── README.md
-└── resource/               # ROS2 resource marker
-    └── tfg_biped_leg
-```
-
-### Components Implemented
-
-| Component | Status | Description |
-|-----------|--------|-------------|
-| ODrive IOdrive Class | ✅ | USB motor control (from odrive_smapy) |
-| ODrive Enums | ✅ | State/error definitions |
-| ODrive Driver (ROS2) | ✅ | ROS2 wrapper for motor control |
-| Forward Kinematics | ✅ | Position from joint angles |
-| Inverse Kinematics | ✅ | Joint angles from position |
-| Trajectory Generator | ✅ | Walking gait patterns |
-| ROS2 Integration | ✅ | Topics, services, launch files |
-| Motor Calibration | ✅ | Standalone calibration script |
-| Single Motor Test | ✅ | Test script ready |
-| Unit Tests | ✅ | Kinematics test suite |
+---
 
 ## Hardware Configuration
 
 ### Current Test Setup (Single Motor)
-| Component | Model | Value |
-|-----------|-------|-------|
-| ODrive | Official v3.6 | USB connected |
-| Motor | D5065 | 270 KV |
-| Axis | Axis 1 | Primary test axis |
-| Power | 12V | DC supply |
-| Encoder CPR | 8192 | Built-in encoder |
+
+| Component | Model | Value | Status |
+|-----------|-------|-------|--------|
+| ODrive | Official v3.6 | USB connected | ✅ Ready |
+| Motor | D5065 | 270 KV | ✅ Ready |
+| Axis | Axis 1 | Primary test | ✅ Ready |
+| Power | 12V | DC supply | ⚡ Powered |
+| Encoder CPR | 8192 | Built-in | ✅ Working |
+
+### Future Hardware (3-DOF Leg)
+
+| Component | Quantity | Model | Purpose |
+|-----------|----------|-------|---------|
+| ODrive v3.6 | 3 | Official or Clone | Motor control |
+| Motor | 3 | D5065 270KV | Actuation |
+| AS5600 | 3 | Magnetic encoder | Joint position |
+| TCA9548A | 1 | I2C Mux | Encoder multiplexing |
+| Raspberry Pi | 1 | Any | Main controller |
 
 ### Motor Specifications (D5065 270KV)
+
 | Parameter | Value |
 |-----------|-------|
 | KV Rating | 270 RPM/V |
 | Pole Pairs | 7 |
-| Torque Constant | 8.27/270 Nm/A |
-| Encoder CPR | 8192 |
+| Torque Constant | 8.27/270 Nm/A (≈0.0306 Nm/A) |
+| Encoder CPR | 8192 (built-in) |
+| Current Limit | 30A |
+| Velocity Limit | 5 turn/s |
 
-### Joint Definitions (Future 3-DOF Leg)
-| Joint | Axis | Description | Typical Range |
-|-------|------|-------------|---------------|
-| Hip | 0 | Yaw rotation (left/right) | ±45° (±0.79 rad) |
-| Knee | 1 | Pitch rotation (flex/extend) | -90° to 0° (-1.57 to 0 rad) |
-| Ankle | 2 | Pitch rotation (foot angle) | ±30° (±0.52 rad) |
+### AS5600 Encoder Specifications
 
-### ODrive Default Configuration
-- **Current Limit**: 30A
-- **Velocity Limit**: 5 turn/s
-- **Calibration Current**: 10A
-- **Brake Resistor**: Enabled
+| Parameter | Value |
+|-----------|-------|
+| Type | Magnetic rotary encoder |
+| Resolution | 12-bit (4096 positions/rev) |
+| I2C Address | 0x36 (all units same) |
+| Communication | I2C (requires mux for multiple) |
+
+### TCA9548A I2C Multiplexer
+
+| Parameter | Value |
+|-----------|-------|
+| Channels | 8 independent I2C buses |
+| I2C Address | 0x70 (default) |
+| Purpose | Enable multiple AS5600 on one bus |
+
+---
+
+## Joint Definitions
+
+### 3-DOF Leg Configuration
+
+| Joint | Motor Axis | Encoder | Typical Range | Gearbox |
+|-------|------------|---------|---------------|---------|
+| Hip | 0 | AS5600 #1 | ±45° (±0.79 rad) | 16:1 |
+| Knee | 1 | AS5600 #2 | -90° to 0° (-1.57 to 0) | 16:1 |
+| Ankle | 2 | AS5600 #3 | ±30° (±0.52 rad) | 16:1 |
+
+### Gearbox Conversion
+
+```
+joint_turns = motor_turns / 16  (16:1 reduction)
+motor_turns = joint_turns × 16
+```
+
+---
+
+## Project Status
+
+### Current Status: 🚧 Single Motor + Encoder Integration
+
+- [x] Project structure created
+- [x] All Python modules implemented
+- [x] ROS2 integration complete
+- [x] Initial commit created
+- [x] Git repository initialized
+- [x] SSH key setup
+- [x] Push to GitHub
+- [x] Code copied from USB (odrive_smapy)
+- [x] Test script created
+- [ ] Test single motor with ODrive
+- [ ] Add I2C mux + AS5600 code
+- [ ] Integrate encoder reading with motor control
+
+### Components Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| ODrive IOdrive Class | ✅ | USB motor control |
+| ODrive Enums | ✅ | State/error definitions |
+| ODrive Driver (ROS2) | ✅ | ROS2 wrapper |
+| Forward Kinematics | ✅ | Position from angles |
+| Inverse Kinematics | ✅ | Angles from position |
+| Trajectory Generator | ✅ | Walking gait patterns |
+| ROS2 Integration | ✅ | Topics, services, launch |
+| Motor Calibration | ✅ | Script ready |
+| Single Motor Test | ✅ | Script ready |
+| Unit Tests | ✅ | Kinematics tests |
+| AS5600 Reader | ❌ | Need to implement |
+| I2C Mux Driver | ❌ | Need to implement |
+| Encoder Integration | ❌ | Need to implement |
+
+---
+
+## Files Created (30+ files)
+
+```
+tfg_biped_leg/
+├── PROJECT_CONTEXT.md          # AI memory - UPDATED 2026-04-12
+├── README.md                  # Project documentation
+├── LICENSE                    # MIT license
+├── requirements.txt            # Python dependencies
+├── .gitignore                 # Git ignore patterns
+├── package.xml                # ROS2 package manifest
+├── setup.py                   # Python package setup
+├── setup.cfg                  # Package config
+│
+├── config/                    # Motor configurations
+│   ├── hip.yaml               # Hip joint config
+│   ├── knee.yaml              # Knee joint config
+│   ├── ankle.yaml             # Ankle joint config
+│   └── my_config.json         # D5065 motor config
+│
+├── launch/                     # ROS2 launch files
+│   └── bringup.launch.py      # Main bringup launch
+│
+├── msg/                       # ROS2 message definitions
+│   ├── JointAngles.msg        # Joint angles message
+│   └── LegPose.msg            # Leg pose message
+│
+├── srv/                       # ROS2 service definitions
+│   └── LegCommand.srv         # Leg command service
+│
+├── tfg_biped_leg/             # Main Python package
+│   ├── __init__.py
+│   ├── odrive_interface.py    # IOdrive class (from odrive_smapy)
+│   ├── odrive_enums.py        # ODrive enums (from odrive_smapy)
+│   ├── odrive_driver.py       # ODrive USB communication
+│   ├── leg_kinematics.py      # FK/IK for 3-DOF leg
+│   ├── leg_controller.py       # ROS2 controller node
+│   └── trajectory_generator.py # Walking gait patterns
+│
+├── scripts/                    # Utility scripts
+│   ├── calibrate_motors.py    # Motor calibration
+│   ├── test_leg.py           # Basic leg testing
+│   ├── test_single_motor.py  # Single motor test
+│   └── odrive_hw_interface.py # Hardware interface (from odrive_smapy)
+│
+├── src/                       # NEW: Low-level drivers
+│   ├── __init__.py
+│   ├── as5600_encoder.py     # TODO: AS5600 driver
+│   └── i2c_mux.py            # TODO: TCA9548A driver
+│
+├── tests/                     # Unit tests
+│   └── test_kinematics.py
+│
+├── external/                  # Git submodule placeholder
+│   └── README.md
+│
+└── resource/                 # ROS2 resource marker
+    └── tfg_biped_leg
+```
+
+---
+
+## TODO
+
+### High Priority
+- [ ] Test single motor with official ODrive v3.6
+- [ ] Add I2C mux driver (TCA9548A)
+- [ ] Add AS5600 encoder driver
+- [ ] Test encoder reading
+- [ ] Integrate encoder with motor control
+- [ ] Test Chinese ODrive clone (M1 M22015)
+
+### Medium Priority
+- [ ] Calibrate motors
+- [ ] Verify kinematics with physical leg
+- [ ] Add 2 more motors (expand to 3-DOF)
+- [ ] Implement closed-loop position control with encoder feedback
+
+### Low Priority
+- [ ] Create walking gait trajectories
+- [ ] Test leg movement
+- [ ] Expand to 2-leg (bipedal) configuration
+- [ ] Clone private odrive_smapy repo
+
+---
+
+## Important Notes
+
+### ODrive Setup
+```bash
+# USB permissions
+sudo chmod 666 /dev/ttyACM0
+
+# Or create permanent udev rule
+echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0666"' | sudo tee /etc/udev/rules.d/50-odrive.rules
+sudo udevadm control --reload-rules
+```
+
+### I2C Setup on Pi
+```bash
+# Enable I2C in raspi-config
+sudo raspi-config
+# → Interface Options → I2C → Enable
+
+# Install i2c tools
+sudo apt install i2c-tools python3-smbus
+
+# Check devices
+sudo i2cdetect -y 1
+```
+
+### AS5600 Address Issue
+All AS5600 encoders share address **0x36**. Must use TCA9548A I2C multiplexer to read multiple encoders.
+
+### First Use Checklist
+1. [ ] Set ODrive USB permissions
+2. [ ] Enable I2C on Pi
+3. [ ] Connect TCA9548A and verify with `i2cdetect`
+4. [ ] Connect AS5600 encoders to mux channels
+5. [ ] Run motor calibration
+6. [ ] Test encoder reading
+7. [ ] Verify closed-loop control
+
+---
 
 ## Reference Repositories
 
@@ -165,14 +322,24 @@ tfg_biped_leg/
 
 ### Public Dependencies
 - **ODrive**: https://github.com/odriverobotics/ODrive
+  - Firmware v0.5.x compatible
 - **ros_odrive**: https://github.com/odriverobotics/ros_odrive
+  - ROS2 integration
+- **Makerbase ODrive**: https://github.com/makerbase-mks/ODrive-MKS
+  - Chinese clone firmware
 
-## Important Notes
+---
 
-1. **ODrive v3.6 Setup**: `sudo chmod 666 /dev/ttyACM0`
-2. **First Use**: Run motor calibration before initial use
-3. **Private Repo**: Clone `odrive_smapy` into `external/` when available
-4. **Testing**: Start with single joint tests before full leg integration
+## Chinese ODrive Clone Notes
+
+### M1 M22015 (Makerbase)
+- **Status**: Not yet tested
+- **Device Name**: May appear as `dev0` instead of `odrv0`
+- **Compatibility**: Works with official firmware (mostly)
+- **Warning**: May show "board not genuine" - usually still works
+- **Firmware**: Can flash official 0.5.x via ST-Link if needed
+
+---
 
 ## User Information
 
@@ -181,34 +348,7 @@ tfg_biped_leg/
 - **Working Directory**: /home/pi/TFG
 - **GitHub**: Josama-99
 
-## TODO
-
-### High Priority
-- [x] Set up SSH keys for GitHub ✅
-- [x] Push to GitHub ✅
-- [ ] Test single motor with official ODrive v3.6
-- [ ] Test Chinese ODrive clone (M1 M22015)
-- [ ] Clone private odrive_smapy repo
-
-### Medium Priority
-- [ ] Calibrate motors
-- [ ] Verify kinematics with physical leg
-- [ ] Expand to 3-DOF (add 2 more motors)
-
-### Low Priority
-- [ ] Implement full 3-DOF kinematics validation
-- [ ] Create walking gait trajectories
-- [ ] Test leg movement
-- [ ] Expand to 2-leg (bipedal) configuration
-
-## Chinese ODrive Clone Notes
-
-### M1 M22015 (Makerbase)
-- **Status**: Not yet tested
-- **Device Name**: May appear as `dev0` instead of `odrv0`
-- **Compatibility**: Works with official firmware (mostly)
-- **GitHub**: https://github.com/makerbase-mks/ODrive-MKS
-- **Warning**: May show "board not genuine" - usually still works
+---
 
 ## Change Log
 
@@ -218,11 +358,20 @@ tfg_biped_leg/
 - Git repository initialized with initial commit
 - GitHub repo created (Josama-99/tfg_biped_leg)
 - SSH keys generated (ed25519)
-- **GitHub push complete** - All files pushed
+- GitHub push complete
 - Code copied from USB (odrive_smapy-main):
   - odrive_interface.py → tfg_biped_leg/
   - odrive_enums.py → tfg_biped_leg/
   - odrive_hw_interface.py → scripts/
   - my_config.json → config/
 - Test script created: scripts/test_single_motor.py
-- PROJECT_CONTEXT.md updated with hardware details
+
+### 2026-04-12 (Architecture Update)
+- Architecture finalized: Pi + ODrive + TCA9548A + AS5600
+- Added complete hardware specifications
+- Added AS5600 encoder details
+- Added TCA9548A multiplexer info
+- Added I2C setup instructions
+- Added joint definitions with gearbox conversion
+- Updated TODO list with encoder integration tasks
+- Added source directory structure for new drivers
