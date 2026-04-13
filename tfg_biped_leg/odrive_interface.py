@@ -1,7 +1,7 @@
 import time
 import odrive
 import asyncio
-from odrive_enums import (
+from .odrive_enums import (
     AxisState, ControlMode, 
     decode_error_enum, display_error_enum_nb, 
     ODriveError, AxisError, MotorError, 

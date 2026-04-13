@@ -16,7 +16,6 @@ Note: Run with sudo if you have USB permission issues.
 
 import sys
 import time
-sys.path.insert(0, '/home/pi/TFG')
 
 from tfg_biped_leg.odrive_interface import IOdrive
 from tfg_biped_leg.odrive_enums import AxisState, ControlMode

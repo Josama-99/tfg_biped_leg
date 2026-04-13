@@ -6,10 +6,12 @@ from .odrive_driver import ODriveDriver
 from .leg_kinematics import LegKinematics
 from .leg_controller import LegController
 from .trajectory_generator import TrajectoryGenerator
+from . import odrive_enums
 
 __all__ = [
     'ODriveDriver',
     'LegKinematics',
     'LegController',
     'TrajectoryGenerator',
+    'odrive_enums',
 ]
