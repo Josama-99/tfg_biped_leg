@@ -1,0 +1,111 @@
+\chapter{Implementación}
+
+\section{Estructura del Software}
+
+El software del proyecto está desarrollado en Python 3.12 y utiliza ROS2 Jazzy como framework de robótica. La estructura del paquete sigue las convenciones de ROS2:
+
+\begin{itemize}
+    \item \texttt{tfg\_biped\_leg/}: Paquete principal de Python
+    \begin{itemize}
+        \item \texttt{odrive\_interface.py}: Clase \texttt{IOdrive} para comunicación con ODrive
+        \item \texttt{odrive\_enums.py}: Definiciones de estados y errores de ODrive
+        \item \texttt{odrive\_driver.py}: Wrapper de ROS2 para ODrive
+        \item \texttt{leg\_kinematics.py}: Clase \texttt{LegKinematics} para cinemática
+        \item \texttt{trajectory\_generator.py}: Clase \texttt{TrajectoryGenerator} para trayectorias
+    \end{itemize}
+    \item \texttt{scripts/}: Scripts de utilidad
+    \begin{itemize}
+        \item \texttt{odrive\_test.py}: Menú interactivo de pruebas
+        \item \texttt{test\_single\_motor.py}: Prueba de motor único
+        \item \texttt{calibrate\_motors.py}: Calibración de motores
+    \end{itemize}
+    \item \texttt{launch/}: Archivos de lanzamiento de ROS2
+    \item \texttt{config/}: Archivos de configuración de motores
+\end{itemize}
+
+\section{Comunicación con ODrive}
+
+La comunicación con los controladores ODrive se realiza vía USB usando la biblioteca \texttt{odrive} de Python. El proceso de inicialización incluye:
+
+\begin{enumerate}
+    \item Búsqueda y conexión con los ODrives (oficial y Makerbase)
+    \item Calibración de motores y encoders
+    \item Configuración de límites de corriente, velocidad y parámetros del motor
+    \item Habilitación del control en lazo cerrado
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption=Ejemplo de conexión con ODrive]
+import odrive
+from odrive.enums import *
+
+# Conectar con ODrive
+odrv = odrive.find_any()
+print(f"ODrive conectado: {odrv.serial_number}")
+
+# Calibrar motor en eje 0
+odrv.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
+while odrv.axis0.current_state != AXIS_STATE_IDLE:
+    time.sleep(0.1)
+
+# Configurar límite de corriente
+odrv.axis0.motor.config.current_lim = 30  # 30A
+\end{lstlisting}
+
+\section{Cinemática Directa e Inversa}
+
+La clase \texttt{LegKinematics} implementa las ecuaciones de cinemática para la pierna de 3-DOF. Las longitudes de eslabones son $L_1 = 0.04$m, $L_2 = 0.35$m, $L_3 = 0.35$m.
+
+\subsection{Cinemática Directa}
+Dados los ángulos articulares $\theta_1$ (Hip 1), $\theta_2$ (Hip 2), $\theta_3$ (Knee), se calcula la posición del pie:
+
+\begin{align}
+x &= L_2 \sin(\theta_2) + L_3 \sin(\theta_2 + \theta_3) \\
+y &= L_1 \sin(\theta_1) + L_2 \cos(\theta_2) \sin(\theta_1) + L_3 \cos(\theta_2 + \theta_3) \sin(\theta_1) \\
+z &= -[L_1 \cos(\theta_1) + L_2 \cos(\theta_2) \cos(\theta_1) + L_3 \cos(\theta_2 + \theta_3) \cos(\theta_1)]
+\end{align}
+
+\subsection{Cinemática Inversa}
+Dada una posición objetivo $(x, y, z)$, se calculan los ángulos usando geometría de 3 eslabones en el espacio.
+
+\section{Generación de Trayectorias}
+
+La clase \texttt{TrajectoryGenerator} genera trayectorias suaves para el movimiento de la pierna, incluyendo:
+
+\begin{itemize}
+    \item Trayectorias de paso (step trajectories)
+    \item Ciclos de marcha (walking cycles)
+    \item Trayectorias circulares
+    \item Suavizado de trayectorias usando curvas de Bézier
+\end{itemize}
+
+\section{Integración con ROS2}
+
+El paquete de ROS2 proporciona:
+\begin{itemize}
+    \item Nodos para control de ODrive
+    \item Topics para comandos de posición/velocidad/par
+    \item Servicios para calibración y configuración
+    \item Archivos de lanzamiento para iniciar el sistema
+\end{itemize}
+
+\section{Lectura de Encoders AS5600}
+
+Los encoders magnéticos AS5600 se leen vía I2C usando el multiplexor TCA9548A. Cada encoder tiene la misma dirección I2C (0x36), por lo que el multiplexor permite seleccionar qué canal leer.
+
+\begin{lstlisting}[language=Python, caption=Lectura de encoder AS5600 vía TCA9548A]
+import smbus2
+import time
+
+class AS5600:
+    def __init__(self, mux, channel, address=0x36):
+        self.mux = mux
+        self.channel = channel
+        self.address = address
+        self.bus = smbus2.SMBus(1)
+    
+    def read_angle(self):
+        self.mux.select_channel(self.channel)
+        data = self.bus.read_i2c_block_data(self.address, 0x0C, 2)
+        angle = (data[0] << 8) | data[1]
+        return (angle / 4096.0) * 360.0  # Grados
+\end{lstlisting}

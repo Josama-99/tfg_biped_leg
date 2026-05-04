@@ -1,0 +1,59 @@
+\chapter{Conclusiones y Trabajo Futuro}
+
+\section{Conclusiones}
+
+El desarrollo de este Trabajo de Fin de Grado ha permitido diseñar e implementar un sistema de control para una pierna robótica bípeda de 3 grados de libertad utilizando controladores ODrive.
+
+Los principales logros obtenidos son:
+
+\begin{enumerate}
+    \item \textbf{Estructura de Software Completa}: Se ha desarrollado un paquete de ROS2 (Jazzy) con todos los módulos necesarios para el control de la pierna robótica, incluyendo interfaces con ODrive, cinemática, y generación de trayectorias.
+    
+    \item \textbf{Integración con ODrive}: Se ha logrado la comunicación exitosa vía USB con el ODrive v3.6 oficial, implementando calibración automática y los tres modos de control (par, velocidad, posición).
+    
+    \item \textbf{Cinemática Validada}: Las implementaciones de cinemática directa e inversa han sido verificadas mediante tests unitarios, asegurando que la pierna pueda alcanzar posiciones objetivo en el espacio cartesiano.
+    
+    \item \textbf{Generación de Trayectorias}: Se han implementado algoritmos para generar trayectorias suaves de marcha, utilizando curvas de Bézier para evitar movimientos bruscos.
+    
+    \item \textbf{Cálculo de Torque}: Se han realizado los cálculos de par requerido para cada articulación en configuración de sentadilla, identificando que la articulación Hip 1 excede la capacidad del ODrive con reductora 16:1 (22.46 Nm requeridos vs 14.7 Nm disponibles).
+\end{enumerate}
+
+\section{Limitaciones Identificadas}
+
+\begin{itemize}
+    \item \textbf{ODrive Makerbase Bricked}: El clon chino Makerbase M1 M22015 no ha podido ser recuperado, limitando el sistema a 1 motor operativo en lugar de 3.
+    
+    \item \textbf{Capacidad de Par Insuficiente}: La articulación Hip 1 requiere más par del que puede proporcionar el ODrive con la reductora actual de 16:1, especialmente en configuraciones de sentadilla unipodal.
+    
+    \item \textbf{Encoders Pendientes}: La lectura de encoders AS5600 vía multiplexor I2C no ha sido probada físicamente debido a la falta de integración completa del hardware.
+\end{itemize}
+
+\section{Trabajo Futuro}
+
+Las líneas de trabajo futuras para completar y mejorar el proyecto incluyen:
+
+\subsection{Corto Plazo}
+\begin{itemize}
+    \item Recuperar o reemplazar el ODrive Makerbase para tener los 3 motores operativos por pierna.
+    \item Probar la lectura de encoders AS5600 usando el multiplexor TCA9548A.
+    \item Integrar la realimentación de posición de los encoders con el control de motores.
+\end{itemize}
+
+\subsection{Mediano Plazo}
+\begin{itemize}
+    \item Aumentar la relación de reducción de la articulación Hip 1 a 25:1 para satisfacer los requerimientos de par.
+    \item Verificar la cinemática con la pierna física ensamblada (impresión 3D de los eslabones).
+    \item Implementar control en lazo cerrado con realimentación de encoders.
+\end{itemize}
+
+\subsection{Largo Plazo}
+\begin{itemize}
+    \item Expandir el sistema a una configuración bípeda completa (2 piernas, 6 motores).
+    \item Implementar algoritmos de marcha dinámica para caminata estable.
+    \item Desarrollar interfaz de usuario para monitoreo y control en tiempo real.
+    \item Integrar sensores de fuerza en la planta del pie para mejorar el control de equilibrio.
+\end{itemize}
+
+\section{Reflexión Final}
+
+Este proyecto ha proporcionado una base sólida para el desarrollo de robots bípedos usando componentes de bajo costo como los controladores ODrive y motores D5065. A pesar de los desafíos con el hardware (Makerbase bricked), el sistema de software desarrollado es modular, escalable y listo para ser extendido a una plataforma robótica completa.

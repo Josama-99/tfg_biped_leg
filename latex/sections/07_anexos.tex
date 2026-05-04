@@ -1,0 +1,131 @@
+\chapter{Anexos}
+
+\section{Datasheets y Documentación Técnica}
+
+\subsection{Motor D5065 270KV}
+\begin{itemize}
+    \item KV Rating: 270 RPM/V
+    \item Pole Pairs: 7
+    \item Torque Constant: 8.27/270 Nm/A ($\approx$0.0306 Nm/A)
+    \item Max Current: 30A (configurado)
+    \item Encoder: Integrado 8192 CPR
+\end{itemize}
+
+\subsection{Encoder AS5600}
+\begin{itemize}
+    \item Tipo: Magnetic rotary encoder
+    \item Resolución: 12-bit (4096 positions/rev)
+    \item Interfaz: I2C (dirección 0x36)
+    \item Voltaje: 3.3V - 5V
+\end{itemize}
+Datasheet: \url{https://ams.com/as5600}
+
+\subsection{Multiplexor I2C TCA9548A}
+\begin{itemize}
+    \item Canales: 8 buses I2C independientes
+    \item Dirección I2C: 0x70 (configurable)
+    \item Voltaje: 1.65V - 5.5V
+\end{itemize}
+Datasheet: \url{https://www.ti.com/product/TCA9548A}
+
+\subsection{ODrive v3.6}
+\begin{itemize}
+    \item Firmware: v0.5.6 (oficial)
+    \item Comunicación: USB, UART
+    \item Motores soportados: 2 (BLDC/PMSM)
+    \item Corriente máxima: 48A (24V), 24A (56V)
+\end{itemize}
+Documentación: \url{https://docs.odriverobotics.com/}
+
+\section{Código Fuente}
+
+El código fuente completo del proyecto está disponible en:
+\begin{center}
+\url{https://github.com/Josama-99/tfg_biped_leg}
+\end{center}
+
+\subsection{Estructura del Repositorio}
+\begin{verbatim}
+tfg_biped_leg/
+├── config/                     # Configuraciones de motores
+│   └── my_config.json
+├── launch/                     # Archivos launch de ROS2
+├── msg/                        # Mensajes ROS2
+├── srv/                        # Servicios ROS2
+├── src/                        # Drivers de bajo nivel
+│   ├── as5600_encoder.py       # Driver AS5600
+│   └── i2c_mux.py             # Driver TCA9548A
+├── tfg_biped_leg/             # Paquete principal Python
+│   ├── odrive_interface.py     # Control ODrive
+│   ├── odrive_enums.py         # Enums ODrive
+│   ├── odrive_driver.py        # Driver ROS2
+│   ├── leg_kinematics.py       # Cinemática
+│   └── trajectory_generator.py  # Trayectorias
+├── scripts/                    # Scripts de utilidad
+│   ├── test_single_motor.py
+│   ├── calibrate_motors.py
+│   └── odrive_test.py
+└── tests/                      # Tests unitarios
+\end{verbatim}
+
+\subsection{Ejemplo de Código: Conexión ODrive}
+\begin{lstlisting}[language=Python, caption=Conexión y configuración básica de ODrive]
+import odrive
+from odrive.enums import *
+
+def connect_odrive():
+    """Conectar y configurar ODrive"""
+    print("Buscando ODrive...")
+    odrv = odrive.find_any()
+    print(f"ODrive encontrado: S/N {odrv.serial_number}")
+    return odrv
+
+def configure_motor(odrv, axis_num):
+    """Configurar motor en eje especificado"""
+    axis = getattr(odrv, f'axis{axis_num}')
+    axis.motor.config.current_lim = 30
+    axis.motor.config.calibration_current = 10
+    axis.encoder.config.cpr = 8192
+    print(f"Motor en eje {axis_num} configurado")
+
+# Uso
+odrv = connect_odrive()
+configure_motor(odrv, 0)
+\end{lstlisting}
+
+\section{Diagramas}
+
+\subsection{Diagrama de Arquitectura del Sistema}
+El diagrama de arquitectura (Figura \ref{fig:arquitectura} en el Capítulo 3) muestra la interconexión entre:
+\begin{itemize}
+    \item Raspberry Pi (control de alto nivel)
+    \item ODrive Oficial y Makerbase (control de motores)
+    \item Multiplexor TCA9548A (lectura de encoders)
+    \item Motores y encoders
+\end{itemize}
+
+\subsection{Esquemático de Conexiones}
+\begin{itemize}
+    \item \textbf{ODrive - Motor}: Fases U, V, W; Encoder A, B
+    \item \textbf{Raspberry Pi - ODrive}: USB (comunicación serie)
+    \item \textbf{Raspberry Pi - TCA9548A}: I2C (SDA, SCL)
+    \item \textbf{TCA9548A - AS5600}: Canales 0, 1, 2 (un encoder por canal)
+\end{itemize}
+
+\section{Configuración del Entorno de Desarrollo}
+
+\subsection{Raspberry Pi Setup}
+\begin{enumerate}
+    \item Instalar ROS2 Jazzy en Ubuntu 24.04
+    \item Crear entorno virtual Python: \texttt{python3 -m venv tfg\_venv}
+    \item Instalar dependencias: \texttt{pip install odrive numpy smbus2 pyyaml colorama matplotlib}
+    \item Configurar permisos USB para ODrive (regla udev)
+    \item Habilitar I2C: \texttt{sudo raspi-config → Interface Options → I2C}
+\end{enumerate}
+
+\subsection{Repositorio de Referencia}
+Para el código de control de motores, se utilizó como referencia el repositorio privado:
+\begin{center}
+\url{https://github.com/SergiMuac/odrive_smapy}
+\end{center}
+(Disponible bajo solicitud)

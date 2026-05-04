@@ -1,0 +1,62 @@
+\documentclass[12pt,a4paper]{report}
+
+% Packages
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Page setup
+\geometry{margin=2.5cm}
+
+% Siunitx setup
+\sisetup{
+  per-mode=symbol,
+  group-separator={,},
+  decimal-separator={.}
+}
+
+% Code listing setup
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  showstringspaces=false
+}
+
+\title{Control de una pierna robótica bípeda de 3-DOF usando controladores ODrive}
+\author{Tu Nombre}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\input{sections/01_introduccion}
+\input{sections/02_marco_teorico}
+\input{sections/03_diseno_sistema}
+\input{sections/04_implementacion}
+\input{sections/05_resultados}
+\input{sections/06_conclusiones}
+\input{sections/07_anexos}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

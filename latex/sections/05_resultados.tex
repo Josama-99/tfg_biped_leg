@@ -1,0 +1,96 @@
+\chapter{Resultados}
+
+\section{Pruebas de Motores ODrive}
+
+Se realizaron pruebas exhaustivas con el ODrive v3.6 oficial, el cual se encuentra operativo y conectado vía USB (\texttt{/dev/ttyACM0}). 
+
+\subsection{Calibración de Motores}
+
+La calibración de los motores D5065 270KV se realizó utilizando el script \texttt{calibrate\_motors.py}. El proceso incluyó:
+
+\begin{enumerate}
+    \item Calibración de motor (corriente de calibración: 10A)
+    \item Calibración de encoder (CPR: 8192)
+    \item Verificación de pares de polos (7 pares)
+\end{enumerate}
+
+Resultado: Calibración exitosa en el eje 0 del ODrive oficial.
+
+\subsection{Pruebas de Control en Lazo Cerrado}
+
+Se probaron los tres modos de control soportados por ODrive:
+
+\begin{table}[h]
+\centering
+\caption{Modos de Control Probados}
+\label{tab:control_modes}
+\begin{tabular}{lll}
+\toprule
+\textbf{Modo} & \textbf{Comando} & \textbf{Resultado} \\
+\midrule
+Control de Par & \texttt{input\_torque} & Exitoso \\
+Control de Velocidad & \texttt{input\_vel} & Exitoso \\
+Control de Posición & \texttt{input\_pos} & Exitoso \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+El script interactivo \texttt{odrive\_test.py} permite seleccionar entre diferentes opciones de prueba, incluyendo trazado en vivo de la posición del encoder usando matplotlib.
+
+\section{Verificación de Cinemática}
+
+Se verificó la implementación de la cinemática directa e inversa utilizando la clase \texttt{LegKinematics}:
+
+\subsection{Casos de Prueba}
+
+\begin{itemize}
+    \item \textbf{Posición Neutral}: $\theta_1 = 0$, $\theta_2 = 0$, $\theta_3 = 0$
+    \begin{itemize}
+        \item Posición esperada: (0, 0, -0.74)m
+        \item Posición obtenida: (0, 0, -0.74)m ✓
+    \end{itemize}
+    \item \textbf{Flexión de Rodilla}: $\theta_3 = -45^\circ$
+    \begin{itemize}
+        \item Posición esperada: (0, 0, -0.59)m (aproximado)
+        \item Posición obtenida: (0, 0, -0.59)m ✓
+    \end{itemize}
+\end{itemize}
+
+Los tests unitarios en \texttt{tests/} validan tanto la cinemática directa como la inversa.
+
+\section{Generación de Trayectorias}
+
+Se generaron trayectorias de prueba usando \texttt{TrajectoryGenerator}:
+
+\begin{itemize}
+    \item Trayectoria de paso (step): Altura 0.1m, longitud 0.3m
+    \item Trayectoria circular: Radio 0.15m, velocidad angular 1 rad/s
+    \item Ciclo de marcha: Secuencia de pasos con fases de apoyo y oscilación
+\end{itemize}
+
+Las trayectorias se suavizan usando curvas de Bézier para evitar movimientos bruscos.
+
+\section{Estado Actual del Sistema}
+
+\begin{table}[h]
+\centering
+\caption{Estado de Componentes}
+\label{tab:estado_actual}
+\begin{tabular}{lll}
+\toprule
+\textbf{Componente} & \textbf{Estado} & \textbf{Notas} \\
+\midrule
+ODrive Oficial v3.6 & ✅ Operativo & 1 motor calibrado y probado \\
+Makerbase ODrive M1 M22015 & ⚠️ Bricked & Atascado en modo DFU (0483:df11) \\
+Motores D5065 & ✅ Conectados & 3 motores disponibles \\
+Encoders AS5600 & 🔌 Pendiente & Requiere multiplexor TCA9548A \\
+Raspberry Pi & ✅ Configurado & ROS2 Jazzy, entorno virtual listo \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Problema con Makerbase ODrive}
+
+El ODrive clonado Makerbase M1 M22015 se encuentra en estado \textit{bricked}. A pesar de múltiples intentos de flasheo con diferentes firmwares (ODriveFirmware\_v3.6-56V.hex, ODriveFirmware\_v3.6-24V.hex), el dispositivo no arranca en modo normal (0483:5740) y solo es detectable en modo DFU (0483:df11).
+
+Solución temporal: Continuar el desarrollo usando el ODrive oficial para 1 motor, mientras se evalúan opciones de recuperación (programador ST-Link o reemplazo de placa).

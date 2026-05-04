@@ -1,0 +1,69 @@
+\chapter{Marco Teórico}
+
+\section{Motores BLDC y Control FOC}
+
+Los motores de corriente continua sin escobillas (BLDC, Brushless DC) son ampliamente utilizados en robótica debido a su alta eficiencia, densidad de potencia y bajo mantenimiento. El motor D5065 270KV utilizado en este proyecto es un motor BLDC de 3 fases con las siguientes características:
+
+\begin{itemize}
+    \item KV Rating: 270 RPM/V
+    \item Pole Pairs: 7
+    \item Torque Constant: 8.27/270 Nm/A ($\approx$0.0306 Nm/A)
+    \item Encoder CPR: 8192 (integrado)
+\end{itemize}
+
+El control FOC (Field Oriented Control) es una técnica avanzada de control de motores que permite un control preciso del par motor y la velocidad. Los controladores ODrive utilizan FOC para proporcionar un control suave y eficiente de los motores BLDC.
+
+\section{Controladores ODrive}
+
+ODrive es un controlador de motor de código abierto diseñado específicamente para aplicaciones de robótica. Sus características principales incluyen:
+
+\begin{itemize}
+    \item Soporte para motores BLDC y motores de imanes permanentes (PMSM)
+    \item Comunicación vía USB y UART
+    \item Modos de control: posición, velocidad y par
+    \item Calibración automática de motores y encoders
+    \item Soporte para múltiples protocolos de comunicación
+\end{itemize}
+
+En este proyecto se utilizan dos tipos de ODrive: el ODrive v3.6 oficial y el clon chino Makerbase M1 M22015.
+
+\section{Cinemática de Piernas Robóticas}
+
+La cinemática de una pierna robótica de 3-DOF se divide en:
+
+\subsection{Cinemática Directa}
+
+Dados los ángulos de las articulaciones $\theta_1$, $\theta_2$, $\theta_3$, se calcula la posición del pie $(x, y, z)$ respecto al sistema de coordenadas de la cadera:
+
+\begin{align}
+x &= L_1 \sin(\theta_1) + L_2 \sin(\theta_1 + \theta_2) + L_3 \sin(\theta_1 + \theta_2 + \theta_3) \\
+y &= 0 \quad \text{(plano sagital)} \\
+z &= -[L_1 \cos(\theta_1) + L_2 \cos(\theta_1 + \theta_2) + L_3 \cos(\theta_1 + \theta_2 + \theta_3)]
+\end{align}
+
+donde $L_1 = 0.04$m, $L_2 = 0.35$m, $L_3 = 0.35$m son las longitudes de los eslabones.
+
+\subsection{Cinemática Inversa}
+
+Dada una posición objetivo del pie $(x, y, z)$, se calculan los ángulos de las articulaciones utilizando la ley de cosenos:
+
+\begin{align}
+\theta_3 &= \pm \arccos\left(\frac{x^2 + z^2 - L_1^2 - L_2^2 - L_3^2}{2 L_2 L_3}\right) \\
+\theta_2 &= \arctan2(\sqrt{1 - D^2}, D) \quad \text{donde } D = \frac{x^2 + z^2 - L_1^2 - L_2^2 - L_3^2}{2 L_2 \sqrt{x^2 + z^2}} \\
+\theta_1 &= \arctan2(z, x) - \arctan2(L_2 \sin(\theta_2) + L_3 \sin(\theta_2 + \theta_3), L_2 \cos(\theta_2) + L_3 \cos(\theta_2 + \theta_3))
+\end{align}
+
+\section{Generadores de Trayectorias}
+
+Para generar movimientos suaves en el robot, se utilizan trayectorias basadas en curvas de Bézier y funciones polinómicas. Los parámetros clave incluyen:
+
+\begin{itemize}
+    \item Altura del paso (step height)
+    \item Longitud del paso (step length)
+    \item Tiempo de apoyo y oscilación
+    \item Suavizado de trayectoria (smoothing)
+\end{itemize}
+
+\section{Encoders AS5600 y Multiplexor I2C}
+
+El encoder magnético AS5600 proporciona una resolución de 12 bits (4096 posiciones por revolución) y se comunica vía I2C. Debido a que todos los encoders comparten la misma dirección I2C (0x36), se utiliza un multiplexor TCA9548A con 8 canales independientes para leer múltiples encoders desde un solo bus I2C del Raspberry Pi.

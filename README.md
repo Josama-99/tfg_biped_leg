@@ -10,49 +10,68 @@ This package provides control for a 3-DOF bipedal robot leg using:
 - **TCA9548A** I2C multiplexer
 - **AS5600** magnetic encoders for joint position sensing
 
-**Current Status**: ODrive connected ✅, Single motor testing ✅
+**Current Status**: Official ODrive working ✅, Makerbase BRICKED ⚠️
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Raspberry Pi                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐ │
-│  │ ODrive USB   │  │ I2C Mux      │  │ Control Logic            │ │
-│  │ (Motor Ctrl) │  │ (Encoders)   │  │ (Position Commands)     │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────────┘ │
-└─────────┼──────────────────┼────────────────────┼──────────────────┘
-           │                  │                    │
-           ▼                  ▼                    │
-     ┌──────────┐      ┌──────────┐                │
-     │ ODrive   │      │TCA9548A  │◄───────────────┘
-     │ v3.6     │      │I2C Mux   │
-     └────┬─────┘      └────┬─────┘
-          │                 │
-          ▼                 ▼
-     ┌──────────┐     ┌──────────┬──────────┬──────────┐
-     │ D5065    │     │ AS5600   │ AS5600   │ AS5600   │
-     │ Motor    │     │ (Hip)    │ (Knee)   │ (Ankle)  │
-     └──────────┘     └──────────┴──────────┴──────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              Raspberry Pi                                    │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐ │
+│  │ Official     │  │ Makerbase    │  │ I2C Mux      │  │ Control Logic    │ │
+│  │ ODrive v3.6  │  │ M1 M22015    │  │              │  │                  │ │
+│  │ (1 motor)    │  │ (2 motors)   │  │ (Encoders)   │  │                  │ │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘ │
+└─────────┼──────────────────┼──────────────────┼─────────────────┼──────────┘
+           │                  │                  │                  │
+           ▼                  ▼                  ▼                  │
+      ┌──────────┐      ┌──────────┐      ┌──────────┐            │
+      │ Official │      │ Makerbase│      │TCA9548A  │◄───────────┘
+      │ ODrive   │      │ ODrive   │      │I2C Mux   │
+      └────┬─────┘      └────┬─────┘      └────┬─────┘
+           │                 │                 │
+           ▼                 ▼                 ▼
+       ┌──────────┐     ┌──────────┐      ┌──────────┬──────────┬──────────┐
+       │ D5065    │     │ D5065    │      │ AS5600   │ AS5600   │ AS5600   │
+       │ (Hip1)   │     │ (Hip2 +  │      │ (Hip1)   │ (Hip2)   │ (Knee)   │
+       │          │     │  Knee)   │      │          │          │          │
+       └──────────┘     └──────────┘      └──────────┴──────────┴──────────┘
 ```
 
 ## Hardware
 
-### Current Test Setup
-| Component | Model | Value |
-|-----------|-------|-------|
-| ODrive | Official v3.6 | USB connected (/dev/ttyACM0) ✅ |
-| Motor | D5065 | 270 KV |
-| Axis | Axis 1 | Primary test |
-| Power | 12V | DC supply |
+### Current Test Setup (Dual ODrive, 3 Motors)
+| Component | Model | Value | Status |
+|-----------|-------|-------|--------|
+| Official ODrive | ODrive v3.6 | USB connected (/dev/ttyACM0) | ✅ Working |
+| Makerbase ODrive | M1 M22015 | USB DFU mode (0483:df11) | ⚠️ Needs firmware |
+| Motors | D5065 | 270 KV | 🔌 Connected |
 
-### Future Requirements (3-DOF Leg)
+### Motor Distribution
+| ODrive | Motors | Joints |
+|--------|--------|--------|
+| Official ODrive v3.6 | 1 | Hip 1 (Flexion/Extension, X-axis) |
+| Makerbase M1 M22015 | 2 | Hip 2 (Abduction/Adduction, Y-axis) + Knee (Flexion/Extension, Y-axis) |
+
+### Joint Configuration (No Ankle, Ball Foot)
+Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended leg points in -Z.
+| Joint | Rotation Axis | ODrive | ODrive Axis | Z Offset (from Hip Mount) | Range | Gearbox |
+|-------|---------------|-------|-------------|---------------------------|-------|---------|
+| Hip 1 (Flexion/Extension) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 |
+| Hip 2 (Abduction/Adduction) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | ±30° (±0.52 rad) | 16:1 |
+| Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | -90° to 0° (-1.57 to 0 rad) | 16:1 |
+| Ball Foot | - | - | - | -740mm (-0.74m) | - | - |
+
+Link lengths: L1=0.04m (Hip1→Hip2), L2=0.35m (Hip2→Knee), L3=0.35m (Knee→Foot), Total hip-to-foot: 0.74m.
+
+### Future Requirements (Full Bipedal Robot - 2 Legs)
 | Component | Quantity |
 |-----------|----------|
-| ODrive v3.6 | 3 |
-| D5065 Motor | 3 |
-| AS5600 Encoder | 3 |
-| TCA9548A I2C Mux | 1 |
+| Official ODrive v3.6 | 2 |
+| Makerbase ODrive M1 M22015 | 2 |
+| D5065 Motor | 6 |
+| AS5600 Encoder | 6 |
+| TCA9548A I2C Mux | 2 |
 
 ## Installation (Pi Setup)
 
@@ -172,13 +191,16 @@ Default settings (`config/my_config.json`):
 }
 ```
 
-## 3-DOF Joint Configuration
+## 3-DOF Joint Configuration (No Ankle)
 
-| Joint | Axis | Range | Gearbox |
-|-------|------|-------|---------|
-| Hip | 0 | ±45° | 16:1 |
-| Knee | 1 | -90° to 0° | 16:1 |
-| Ankle | 2 | ±30° | 16:1 |
+| Joint | Rotation Axis | ODrive Axis | Z Offset | Range | Gearbox |
+|-------|---------------|-------------|----------|-------|---------|
+| Hip 1 (Flexion/Extension) | X-axis | 0 | 0mm | ±45° (±0.79 rad) | 16:1 |
+| Hip 2 (Abduction/Adduction) | Y-axis | 0 (Makerbase) | -40mm | ±30° (±0.52 rad) | 16:1 |
+| Knee (Flexion/Extension) | Y-axis | 1 (Makerbase) | -390mm | -90° to 0° (-1.57 to 0 rad) | 16:1 |
+| Ball Foot | - | - | -740mm | - | - |
+
+Link lengths: L1=0.04m, L2=0.35m, L3=0.35m, Total: 0.74m hip-to-foot.
 
 ## Encoder Information
 
@@ -223,12 +245,88 @@ Menu options:
 2. **Select option 8** → Set position control
 3. **Select option 9** → Enter value (e.g., 0.5 for half turn)
 
-## Chinese ODrive Clones
+## Chinese ODrive (Makerbase M1 M22015) - Firmware Issue
 
-If using M1 M22015 (Makerbase):
-- Device may appear as `/dev/ttyACM1`
-- May show "board not genuine" - usually works
-- https://github.com/makerbase-mks/ODrive-MKS
+The Makerbase ODrive clone controls 2 motors but is currently stuck in DFU mode.
+
+| Parameter | Value |
+|-----------|-------|
+| Model | M1 M22015 |
+| Motors Controlled | 2 (Axis 0 and Axis 1) |
+| USB Device | None (stuck in DFU mode) |
+| Firmware Status | ⚠️ Flash attempted - stuck in DFU mode |
+
+### Issue Description
+
+The board shows as `0483:df11` (STM32 BOOTLOADER) instead of `0483:5740` (ODrive normal mode).
+Firmware flashes complete successfully but the board won't boot into normal mode.
+
+### Firmware Attempted
+
+1. **ODriveFirmware_v3.6-56V.hex** (Makerbase) - Flash succeeded, stuck in DFU
+2. **ODriveFirmware_v3.6-56V.elf** (Official v0.5.6) - Flash failed (file too large)
+3. **ODriveFirmware_v3.6-24V.hex** (Makerbase) - Flash succeeded, stuck in DFU
+
+### Board Status (2026-04-27)
+
+| Mode | lsusb Result | Status |
+|------|--------------|--------|
+| DFU | `0483:df11` | ✅ Detected |
+| RUN | No device | ❌ Not detected |
+
+**Board is bricked** - needs ST-Link programmer to recover or original Makerbase firmware.
+
+### Firmware Files (2026-04-27)
+
+Downloaded to `/home/pi/tfg/`:
+- `ODriveFirmware_v3.6-56V.hex` - Makerbase firmware (649KB)
+- `ODriveFirmware_v3.6-56V.elf` - Official ODrive v0.5.6 (6.4MB)
+
+Board detected as **v3.4 or earlier** by odrivetool 0.5.4. Serial: `345331733432`
+
+### Current Status
+
+The Makerbase M1 M22015 board is **bricked**:
+- Detected in DFU mode (`0483:df11`) ✅
+- NOT detected in RUN mode ❌
+- Board serial: `345331733432`
+- Board detected as v3.4 hardware
+
+### Recovery Options
+
+1. **ST-Link Programmer** (required for recovery)
+2. **Contact Makerbase Support** with serial number
+3. **Source original firmware** from teacher
+4. **Replace board** with new Makerbase or official ODrive
+
+### Flashing Commands (Legacy - Board Bricked)
+
+These commands are for reference only - the board is currently bricked and cannot be recovered without ST-Link.
+
+```bash
+# Install dfu-util
+sudo apt-get install dfu-util
+
+# Download firmware (if not already downloaded)
+wget https://github.com/makerbase-mks/ODrive-MKS/raw/main/02_Makerbase%20ODrive%20related%20documents/ODriveFirmware_v3.6-56V.hex
+
+# Flash Makerbase firmware (in DFU mode)
+sudo dfu-util -a 0 -s 0x08000000:leave -D ODriveFirmware_v3.6-56V.hex
+
+# Download official ODrive firmware
+wget https://github.com/odriverobotics/ODrive/releases/download/fw-v0.5.6/ODriveFirmware_v3.6-56V.elf
+
+# Flash official firmware
+sudo dfu-util -a 0 -s 0x08000000:leave -D ODriveFirmware_v3.6-56V.elf
+
+# After flash, toggle to RUN mode and check:
+lsusb | grep 0483
+# Should show 0483:5740 for normal ODrive mode
+```
+
+### Reference
+- Makerbase GitHub: https://github.com/makerbase-mks/ODrive-MKS
+- ODrive Official: https://github.com/odriverobotics/ODrive
 
 ## License
 
