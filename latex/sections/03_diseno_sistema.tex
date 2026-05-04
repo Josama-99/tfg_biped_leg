@@ -34,8 +34,8 @@ La pierna robótica utiliza un pie de tipo bola (ball foot) y no tiene articulac
 \toprule
 \textbf{Articulación} & \textbf{Eje Rotación} & \textbf{ODrive} & \textbf{Eje ODrive} & \textbf{Offset Z (m)} & \textbf{Rango (rad)} & \textbf{Reducción} \\
 \midrule
-Hip 1 (Flex/Ext) & X & Oficial & 0 & 0 & $\pm$0.79 & 16:1 \\
-Hip 2 (Abd/Add) & Y & Makerbase & 0 & -0.04 & $\pm$0.52 & 16:1 \\
+Hip 1 (Abd/Add) & X & Oficial & 0 & 0 & $\pm$0.79 & 16:1 \\
+Hip 2 (Flex/Ext) & Y & Makerbase & 0 & -0.04 & $\pm$0.52 & 16:1 \\
 Knee (Flex/Ext) & Y & Makerbase & 1 & -0.39 & -1.57 a 0 & 16:1 \\
 Pie de Bola & - & - & - & -0.74 & - & - \\
 \bottomrule
@@ -150,8 +150,8 @@ Para calcular el par requerido en cada articulación, se considera un escenario 
 Se asume la siguiente pose para la sentadilla (sentadilla bilateral, distribución de carga igualitaria):
 
 \begin{itemize}
-    \item Flexión de Hip 1 (eje X): 60° = 1.047 rad
-    \item Abducción de Hip 2 (eje Y): 0° = 0 rad (simétrica, sin carga lateral)
+    \item Abducción de Hip 1 (eje X): 0° = 0 rad (simétrica, sin carga lateral)
+    \item Flexión de Hip 2 (eje Y): 60° = 1.047 rad
     \item Flexión de Knee (eje Y): 90° = 1.571 rad
     \item Centros de masa de los eslabones: En el punto medio de cada eslabón (0.02m, 0.175m, 0.175m desde la articulación proximal)
     \item Contacto con el suelo: Pie de bola a 0.74m por debajo del punto de montaje de la cadera
@@ -161,12 +161,25 @@ Se asume la siguiente pose para la sentadilla (sentadilla bilateral, distribuci�
 
 El par en cada articulación se calcula usando equilibrio estático: $\tau = \sum m_i \cdot g \cdot d_{i,\perp}$, donde $d_{i,\perp}$ es la distancia horizontal desde la articulación hasta el centro de masa de cada carga (perpendicular a la gravedad).
 
-\textbf{Articulación Knee (eje Y):}
+\textbf{Articulación Knee (eje Y, Flexión/Extensión):}
 \begin{align*}
 d_{\text{suelo}} &= 0.175\,\text{m} \quad \text{(CoM en punto medio del eslabón)} \\
 \tau_{\text{suelo}} &= 39.24\,\text{N} \times 0.175\,\text{m} = 6.87\,\text{Nm} \\
 \tau_{\text{pantorrilla}} &= 0.99\,\text{kg} \times 9.81\,\text{m/s}^2 \times 0.0875\,\text{m} = 0.85\,\text{Nm} \\
 \tau_{\text{Knee}} &= 6.87 + 0.85 = \mathbf{7.72\,\text{Nm}}
+\end{align*}
+
+\textbf{Articulación Hip 1 (eje X, Abducción/Adducción):}
+\begin{align*}
+\tau_{\text{Hip 1}} &= 0\,\text{Nm} \quad \text{(sentadilla simétrica, sin carga en plano frontal)}
+\end{align*}
+
+\textbf{Articulación Hip 2 (eje Y, Flexión/Extensión):}
+\begin{align*}
+d_{\text{suelo}} &= 0.04 + 0.35 \times \sin(90^\circ) + 0.175 = 0.565\,\text{m} \\
+\tau_{\text{distal}} &= 39.24\,\text{N} \times 0.565\,\text{m} = 22.17\,\text{Nm} \\
+\tau_{\text{muslo}} &= 1.49\,\text{kg} \times 9.81\,\text{m/s}^2 \times 0.02\,\text{m} = 0.29\,\text{Nm} \\
+\tau_{\text{Hip 2}} &= 22.17 + 0.29 = \mathbf{22.46\,\text{Nm}}
 \end{align*}
 
 \textbf{Articulación Hip 2 (eje Y, Abducción/Adducción):}
@@ -192,11 +205,11 @@ d_{\text{suelo}} &= 0.04 + 0.35 \times \sin(90^\circ) + 0.175 = 0.565\,\text{m} 
 \toprule
 \textbf{Articulación} & \textbf{Par Requerido} & \textbf{Capacidad ODrive (16:1)} & \textbf{Estado} \\
 \midrule
-Hip 1 (eje X) & 22.46 Nm & 14.7 Nm & \textcolor{red}{Insuficiente} \\
-Hip 2 (eje Y) & 0 Nm & 14.7 Nm & \textcolor{green}{Suficiente} \\
-Knee (eje Y) & 7.72 Nm & 14.7 Nm & \textcolor{green}{Suficiente} \\
+Hip 1 (eje X, Abd/Add) & 0 Nm & 14.7 Nm & \textcolor{green}{Suficiente} \\
+Hip 2 (eje Y, Flex/Ext) & 22.46 Nm & 14.7 Nm & \textcolor{red}{Insuficiente} \\
+Knee (eje Y, Flex/Ext) & 7.72 Nm & 14.7 Nm & \textcolor{green}{Suficiente} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Nota:} La articulación Hip 1 excede la capacidad del ODrive (22.46 Nm requeridos vs 14.7 Nm disponibles). Para una sentadilla unipodal (8kg en una pierna), los pares se duplicarían, haciendo que tanto Hip 1 como potencialmente Knee sean insuficientes. Las soluciones incluyen aumentar la relación de reducción a 25:1 o reducir la carga útil/profundidad de la sentadilla.
+\textbf{Nota:} La articulación Hip 2 (eje Y, flexión/extensión) excede la capacidad del ODrive (22.46 Nm requeridos vs 14.7 Nm disponibles). La articulación Hip 1 (eje X, abducción/aducción) es suficiente con 0 Nm en sentadilla simétrica. Para una sentadilla unipodal (8kg en una pierna), los pares se duplicarían, haciendo que Hip 2 y potencialmente Knee sean insuficientes. Las soluciones incluyen aumentar la relación de reducción de Hip 2 a 25:1 o reducir la carga útil/profundidad de la sentadilla.

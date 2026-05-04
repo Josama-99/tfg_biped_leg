@@ -83,8 +83,8 @@ Control de una pierna robótica bípeda de 3-DOF usando controladores ODrive
 Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended leg points in -Z.
 | Joint | Rotation Axis | ODrive | ODrive Axis | Z Offset (from Hip Mount) | Range | Gearbox | Encoder |
 |-------|---------------|-------|-------------|---------------------------|-------|---------|---------|
-| Hip 1 (Flexion/Extension) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 | AS5600 #1 |
-| Hip 2 (Abduction/Adduction) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | ±30° (±0.52 rad) | 16:1 | AS5600 #2 |
+| Hip 1 (Abduction/Adduction) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 | AS5600 #1 |
+| Hip 2 (Flexion/Extension) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | ±30° (±0.52 rad) | 16:1 | AS5600 #2 |
 | Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | -90° to 0° (-1.57 to 0 rad) | 16:1 | AS5600 #3 |
 | Ball Foot | - | - | - | -740mm (-0.74m) | - | - | - |
 
@@ -341,8 +341,8 @@ The coordinate system for the right leg is defined as: +X = Front, +Y = Left, +Z
 \toprule
 \textbf{Joint} & \textbf{Rotation Axis} & \textbf{Z Offset (m)} & \textbf{Link Length (m)} & \textbf{Range (rad)} & \textbf{Gearbox} \\
 \midrule
-Hip 1 (Flex/Ext) & X-axis & 0 & 0.04 & $\pm$0.79 & 16:1 \\
-Hip 2 (Abd/Add) & Y-axis & -0.04 & 0.35 & $\pm$0.52 & 16:1 \\
+Hip 1 (Abd/Add) & X-axis & 0 & 0.04 & $\pm$0.79 & 16:1 \\
+Hip 2 (Flex/Ext) & Y-axis & -0.04 & 0.35 & $\pm$0.52 & 16:1 \\
 Knee (Flex/Ext) & Y-axis & -0.39 & 0.35 & -1.57 to 0 & 16:1 \\
 Ball Foot & - & -0.74 & - & - & - \\
 \bottomrule
@@ -381,9 +381,9 @@ Payload (Torso/Electronics) & - & 1100 & - \\
 For the squatting torque calculation, the following pose is assumed (bilateral squat, equal weight distribution):
 
 \begin{itemize}
-\item Hip 1 (X-axis flexion): 60° = 1.047 rad
-\item Hip 2 (Y-axis abduction): 0° = 0 rad (symmetric, no side load)
-\item Knee (Y-axis flexion): 90° = 1.571 rad
+\item Hip 1 (X-axis abduction): 0° = 0 rad (symmetric, no side load)
+    \item Hip 2 (Y-axis flexion): 60° = 1.047 rad
+    \item Knee (Y-axis flexion): 90° = 1.571 rad
 \item Link centers of mass: At midpoint of each link (0.02m, 0.175m, 0.175m from proximal joint)
 \item Ground contact: Ball foot at 0.74m below hip mount
 \end{itemize}
@@ -423,11 +423,11 @@ d_{\text{ground}} &= 0.04 + 0.35 \times \sin(90^\circ) + 0.175 = 0.565\,\text{m}
 \toprule
 \textbf{Joint} & \textbf{Required Torque} & \textbf{ODrive Capacity (16:1)} & \textbf{Status} \\
 \midrule
-Hip 1 (X-axis) & 22.46 Nm & 14.7 Nm & \textcolor{red}{Insufficient} \\
-Hip 2 (Y-axis) & 0 Nm & 14.7 Nm & \textcolor{green}{Sufficient} \\
-Knee (Y-axis) & 7.72 Nm & 14.7 Nm & \textcolor{green}{Sufficient} \\
+Hip 1 (X-axis, Abd/Add) & 0 Nm & 14.7 Nm & \textcolor{green}{Sufficient} \\
+Hip 2 (Y-axis, Flex/Ext) & 22.46 Nm & 14.7 Nm & \textcolor{red}{Insufficient} \\
+Knee (Y-axis, Flex/Ext) & 7.72 Nm & 14.7 Nm & \textcolor{green}{Sufficient} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\textbf{Note:} The Hip 1 joint exceeds the ODrive capacity (22.46 Nm required vs 14.7 Nm available). For a single-leg squat (8kg on one leg), torques would double, making both Hip 1 and potentially Knee insufficient. Solutions include increasing the gearbox ratio to 25:1 or reducing the payload/squat depth.
+\textbf{Note:} The Hip 2 (Y-axis, Flexion/Extension) joint exceeds the ODrive capacity (22.46 Nm required vs 14.7 Nm available). Hip 1 (X-axis, Abduction/Adduction) is sufficient with 0 Nm in symmetric squat. For a single-leg squat (8kg on one leg), torques would double, making Hip 2 and potentially Knee insufficient. Solutions include increasing the gearbox ratio to 25:1 or reducing the payload/squat depth.

@@ -141,8 +141,8 @@ Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended le
 
 | Joint | Rotation Axis | ODrive | Motor Axis | Z Offset (from Hip Mount) | Encoder | Typical Range | Gearbox |
 |-------|---------------|-------|------------|---------------------------|---------|---------------|---------|
-| Hip 1 (Flexion/Extension) | X-axis | Official ODrive | 0 | 0mm (0m) | AS5600 #1 | ±45° (±0.79 rad) | 16:1 |
-| Hip 2 (Abduction/Adduction) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | AS5600 #2 | ±30° (±0.52 rad) | 16:1 |
+| Hip 1 (Abduction/Adduction) | X-axis | Official ODrive | 0 | 0mm (0m) | AS5600 #1 | ±45° (±0.79 rad) | 16:1 |
+| Hip 2 (Flexion/Extension) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | AS5600 #2 | ±30° (±0.52 rad) | 16:1 |
 | Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | AS5600 #3 | -90° to 0° (-1.57 to 0 rad) | 16:1 |
 | Ball Foot | - | - | - | -740mm (-0.74m) | - | - | - |
 

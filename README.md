@@ -50,15 +50,15 @@ This package provides control for a 3-DOF bipedal robot leg using:
 ### Motor Distribution
 | ODrive | Motors | Joints |
 |--------|--------|--------|
-| Official ODrive v3.6 | 1 | Hip 1 (Flexion/Extension, X-axis) |
-| Makerbase M1 M22015 | 2 | Hip 2 (Abduction/Adduction, Y-axis) + Knee (Flexion/Extension, Y-axis) |
+| Official ODrive v3.6 | 1 | Hip 1 (Abduction/Adduction, X-axis) |
+| Makerbase M1 M22015 | 2 | Hip 2 (Flexion/Extension, Y-axis) + Knee (Flexion/Extension, Y-axis) |
 
 ### Joint Configuration (No Ankle, Ball Foot)
 Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended leg points in -Z.
 | Joint | Rotation Axis | ODrive | ODrive Axis | Z Offset (from Hip Mount) | Range | Gearbox |
 |-------|---------------|-------|-------------|---------------------------|-------|---------|
-| Hip 1 (Flexion/Extension) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 |
-| Hip 2 (Abduction/Adduction) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | ±30° (±0.52 rad) | 16:1 |
+| Hip 1 (Abduction/Adduction) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 |
+| Hip 2 (Flexion/Extension) | Y-axis | Makerbase ODrive | 0 | -40mm (-0.04m) | ±30° (±0.52 rad) | 16:1 |
 | Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | -90° to 0° (-1.57 to 0 rad) | 16:1 |
 | Ball Foot | - | - | - | -740mm (-0.74m) | - | - |
 
@@ -195,8 +195,8 @@ Default settings (`config/my_config.json`):
 
 | Joint | Rotation Axis | ODrive Axis | Z Offset | Range | Gearbox |
 |-------|---------------|-------------|----------|-------|---------|
-| Hip 1 (Flexion/Extension) | X-axis | 0 | 0mm | ±45° (±0.79 rad) | 16:1 |
-| Hip 2 (Abduction/Adduction) | Y-axis | 0 (Makerbase) | -40mm | ±30° (±0.52 rad) | 16:1 |
+| Hip 1 (Abduction/Adduction) | X-axis | 0 | 0mm | ±45° (±0.79 rad) | 16:1 |
+| Hip 2 (Flexion/Extension) | Y-axis | 0 (Makerbase) | -40mm | ±30° (±0.52 rad) | 16:1 |
 | Knee (Flexion/Extension) | Y-axis | 1 (Makerbase) | -390mm | -90° to 0° (-1.57 to 0 rad) | 16:1 |
 | Ball Foot | - | - | -740mm | - | - |
 
