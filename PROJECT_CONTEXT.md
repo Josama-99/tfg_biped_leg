@@ -376,6 +376,12 @@ See also: https://github.com/makerbase-mks/ODrive-MKS
 ## Change Log
 
 ### 2026-05-08
+- Fixed AS5600 CORDIC toggle (215° chip-level jumps) → median-3 + jump threshold filter
+- Fixed periodic I2C bursts (~400 count drops every ~15s) → same filter catches both
+- Encoder readings now stable and clean
+- Recordings saved to recordings/ with timestamped files
+
+### 2026-05-08 (earlier)
 - TCA9548A I2C multiplexer verified working
 - AS5600 encoder tested on mux channel 5
 - Live plotting script created (plot_encoder.py)

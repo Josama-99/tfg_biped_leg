@@ -43,7 +43,7 @@ def main():
         sys.exit(1)
 
     print(f"Recording for {DURATION}s at {SAMPLE_RATE}Hz. Spin the encoder!")
-    print("(Toggle filter active: rejecting >600-count jumps)")
+    print("(Median-3 + jump filter active)")
 
     times = []
     raws = []

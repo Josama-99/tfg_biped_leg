@@ -44,7 +44,8 @@ class PiAS5600Encoder(EncoderInterface):
     # AS5600 I2C address (fixed, cannot be changed)
     AS5600_ADDR = 0x36
 
-    TOGGLE_THRESHOLD = 600
+    NUM_SAMPLES = 3
+    JUMP_THRESHOLD = 300
 
     REG_RAW_ANGLE = 0x0C        # Raw angle (high byte)
     REG_RAW_ANGLE_L = 0x0D      # Raw angle (low byte)
@@ -109,11 +110,15 @@ class PiAS5600Encoder(EncoderInterface):
         try:
             self._select_mux_channel()
             bus = self._get_bus()
-            high = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE)
-            low = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE_L)
-            raw = ((high & 0x0F) << 8) | low
+            vals = []
+            for _ in range(self.NUM_SAMPLES):
+                high = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE)
+                low = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE_L)
+                vals.append(((high & 0x0F) << 8) | low)
+            vals.sort()
+            raw = vals[self.NUM_SAMPLES // 2]
 
-            if self._last_raw is not None and abs(raw - self._last_raw) > self.TOGGLE_THRESHOLD:
+            if self._last_raw is not None and abs(raw - self._last_raw) > self.JUMP_THRESHOLD:
                 return self._last_raw
             self._last_raw = raw
             return raw
@@ -213,6 +218,9 @@ class PiAS5600Encoder(EncoderInterface):
         if self._bus is not None:
             self._bus.close()
             self._bus = None
+
+    def reset_filter(self):
+        self._last_raw = None
     
     def __enter__(self):
         return self

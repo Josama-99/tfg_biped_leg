@@ -10,7 +10,7 @@ This package provides control for a 3-DOF bipedal robot leg using:
 - **TCA9548A** I2C multiplexer
 - **AS5600** magnetic encoders for joint position sensing
 
-**Current Status**: Official ODrive working ✅, TCA9548A + AS5600 encoder reading ✅, Makerbase BRICKED ⚠️
+**Current Status**: Official ODrive working ✅, TCA9548A + AS5600 encoder reading ✅ (with software filter), Makerbase BRICKED ⚠️
 
 ## Architecture
 
@@ -217,6 +217,8 @@ Link lengths: L1=0.04m, L2=0.35m, L3=0.35m, Total: 0.74m hip-to-foot.
 
 ### Encoder-based Homing (Virtual End Switches)
 The AS5600 is an **absolute encoder** (12-bit, 0-4096 per revolution). Since each joint's mechanical range fits within one revolution (due to the 16:1 gearbox), the AS5600 can serve as a virtual end stop — eliminating the need for physical limit switches.
+
+**Note:** The specific AS5600 unit on channel 5 has an internal CORDIC instability that produces ~215° toggles and periodic ~40° drops. The driver compensates with a median-3 read + jump rejection filter (`JUMP_THRESHOLD = 300`). If replacing the encoder, this can be disabled.
 
 **Calibration (one-time, per joint):**
 1. Manually move joint to mechanical limit A, record AS5600 raw → `limit_min`
