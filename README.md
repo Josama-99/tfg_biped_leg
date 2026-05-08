@@ -215,6 +215,27 @@ Link lengths: L1=0.04m, L2=0.35m, L3=0.35m, Total: 0.74m hip-to-foot.
 - **I2C Address**: 0x70 (default)
 - **Purpose**: Enable 3 AS5600 encoders on one Pi I2C bus
 
+### Encoder-based Homing (Virtual End Switches)
+The AS5600 is an **absolute encoder** (12-bit, 0-4096 per revolution). Since each joint's mechanical range fits within one revolution (due to the 16:1 gearbox), the AS5600 can serve as a virtual end stop — eliminating the need for physical limit switches.
+
+**Calibration (one-time, per joint):**
+1. Manually move joint to mechanical limit A, record AS5600 raw → `limit_min`
+2. Manually move joint to mechanical limit B, record AS5600 raw → `limit_max`
+3. Store limits in a config file
+
+**Homing (every startup):**
+1. Read AS5600 raw value for each joint
+2. Map to joint angle:
+   ```
+   joint_deg = (raw - limit_min) / (limit_max - limit_min) * range_deg + range_start
+   ```
+3. Convert to ODrive motor turns: `motor_turns = joint_deg / 360 * GEAR_RATIO`
+4. Set ODrive position setpoint to current position — the robot knows its pose without moving
+
+**Virtual end stops (during operation):**
+- Before every move, clamp target position within recorded limits
+- No physical limit switches needed
+
 ## Testing the ODrive
 
 ### Interactive Test Menu

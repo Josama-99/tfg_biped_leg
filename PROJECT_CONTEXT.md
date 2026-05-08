@@ -132,6 +132,21 @@
 | I2C Address | 0x70 (default) |
 | Purpose | Enable multiple AS5600 on one bus |
 
+### Encoder-based Homing (Virtual End Switches)
+
+The AS5600 absolute encoder replaces physical limit switches:
+
+**Why it works:**
+- AS5600 is absolute (remembers position after power cycle)
+- 12-bit resolution = 4096 positions per revolution
+- Each joint's mechanical range fits within one revolution (16:1 gearbox means 1 joint rev = 16 motor revs)
+- So each AS5600 value maps uniquely to a joint angle with no ambiguity
+
+**Procedure:**
+1. **Calibration** (one-time): Manually move each joint to its mechanical limits, record AS5600 raw values
+2. **Homing** (every startup): Read AS5600 → map to joint angle via stored limits → set ODrive position setpoint (robot knows its pose without moving)
+3. **Virtual end stops** (runtime): Clamp all position targets within the recorded limits
+
 ---
 
 ## Joint Definitions

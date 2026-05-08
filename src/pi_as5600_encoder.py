@@ -6,7 +6,6 @@ I2C multiplexer to support multiple encoders.
 """
 
 import math
-import time
 import smbus2
 from typing import Optional
 
@@ -44,11 +43,13 @@ class PiAS5600Encoder(EncoderInterface):
     
     # AS5600 I2C address (fixed, cannot be changed)
     AS5600_ADDR = 0x36
-    
-    # AS5600 registers
+
+    TOGGLE_THRESHOLD = 600
+
     REG_RAW_ANGLE = 0x0C        # Raw angle (high byte)
-    REG_RAW_ANGLE_L = 0x0D      # Raw angle (low byte) - alternate register
-    REG_ANGLE = 0x0E            # Filtered angle
+    REG_RAW_ANGLE_L = 0x0D      # Raw angle (low byte)
+    REG_ANGLE = 0x0E            # Filtered angle (high byte)
+    REG_ANGLE_L = 0x0F          # Filtered angle (low byte)
     REG_STATUS = 0x0B            # Status register
     REG_AGC = 0x1A              # Automatic Gain Control
     REG_MAGNITUDE = 0x1B         # Magnetic magnitude
@@ -83,86 +84,39 @@ class PiAS5600Encoder(EncoderInterface):
         self.mux_channel = mux_channel
         
         self._mux = TCA9548A(bus=bus, address=mux_address)
+        self._bus = None
         self._connected = False
+        self._last_raw = None
         
     def _select_mux_channel(self) -> None:
-        """Select the multiplexer channel for this encoder."""
-        self._mux.select_channel(self.mux_channel)
+        if self._mux.get_current_channel() != self.mux_channel:
+            self._mux.select_channel(self.mux_channel)
     
-    def _read_byte(self, register: int) -> int:
-        """Read a single byte from the AS5600.
-        
-        Args:
-            register: Register address to read
-            
-        Returns:
-            Byte value read from register
-        """
-        self._select_mux_channel()
-        bus = smbus2.SMBus(self.bus_num)
-        try:
-            return bus.read_byte_data(self.AS5600_ADDR, register)
-        finally:
-            bus.close()
-    
-    def _read_word(self, register: int) -> int:
-        """Read a 16-bit word from the AS5600.
-        
-        Args:
-            register: Register address to read
-            
-        Returns:
-            16-bit word value
-        """
-        self._select_mux_channel()
-        bus = smbus2.SMBus(self.bus_num)
-        try:
-            return bus.read_word_data(self.AS5600_ADDR, register)
-        finally:
-            bus.close()
-    
+    def _get_bus(self):
+        if self._bus is None:
+            self._bus = smbus2.SMBus(self.bus_num)
+        return self._bus
+
     def is_connected(self) -> bool:
-        """Check if the encoder is connected and responding.
-        
-        Returns:
-            True if encoder responds, False otherwise
-        """
         try:
             self._select_mux_channel()
-            bus = smbus2.SMBus(self.bus_num)
-            try:
-                # Try to read status register
-                status = bus.read_byte_data(self.AS5600_ADDR, self.REG_STATUS)
-                self._connected = True
-                self.logger.debug(f"{self.name}: Encoder connected")
-                return True
-            finally:
-                bus.close()
-        except Exception as e:
-            self._connected = False
-            self.logger.warning(f"{self.name}: Encoder not responding: {e}")
+            self._get_bus().read_byte_data(self.AS5600_ADDR, self.REG_STATUS)
+            return True
+        except Exception:
             return False
-    
+
     def read_raw(self) -> int:
-        """Read the raw encoder value (0-4095).
-        
-        Returns:
-            Raw encoder value (12-bit, 0-4095)
-            
-        Raises:
-            EncoderTimeoutError: If communication times out
-            EncoderNotFoundError: If encoder is not responding
-        """
         try:
-            # Read high and low bytes of raw angle
-            high = self._read_byte(self.REG_RAW_ANGLE)
-            low = self._read_byte(self.REG_RAW_ANGLE_L)
-            
-            # Combine into 12-bit value (bits 11-0)
+            self._select_mux_channel()
+            bus = self._get_bus()
+            high = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE)
+            low = bus.read_byte_data(self.AS5600_ADDR, self.REG_RAW_ANGLE_L)
             raw = ((high & 0x0F) << 8) | low
-            
+
+            if self._last_raw is not None and abs(raw - self._last_raw) > self.TOGGLE_THRESHOLD:
+                return self._last_raw
+            self._last_raw = raw
             return raw
-            
         except FileNotFoundError as e:
             raise EncoderNotFoundError(f"{self.name}: I2C bus not found: {e}")
         except OSError as e:
@@ -171,7 +125,7 @@ class PiAS5600Encoder(EncoderInterface):
             raise
         except Exception as e:
             raise EncoderTimeoutError(f"{self.name}: Communication error: {e}")
-    
+
     def read_angle(self) -> float:
         """Read the current angle in radians.
         
@@ -184,33 +138,26 @@ class PiAS5600Encoder(EncoderInterface):
         return angle
     
     def read_filtered_angle(self) -> float:
-        """Read the filtered angle in radians.
-        
-        The AS5600 has a built-in low-pass filter that provides
-        a smoother reading at the cost of some latency.
-        
-        Returns:
-            Filtered angle in radians
-        """
         try:
-            high = self._read_byte(self.REG_ANGLE)
-            low = self._read_byte(self.REG_ANGLE_L)
+            self._select_mux_channel()
+            bus = self._get_bus()
+            high = bus.read_byte_data(self.AS5600_ADDR, self.REG_ANGLE)
+            low = bus.read_byte_data(self.AS5600_ADDR, self.REG_ANGLE_L)
             raw = ((high & 0x0F) << 8) | low
             return (raw / self.MAX_RAW_VALUE) * 2 * math.pi - self._offset
         except Exception as e:
             self.logger.warning(f"{self.name}: Failed to read filtered angle: {e}")
             return self.read_angle()
-    
+
     def get_magnet_status(self) -> dict:
-        """Get the magnet detection status.
-        
-        Returns:
-            Dictionary with magnet status information
-        """
         try:
-            status = self._read_byte(self.REG_STATUS)
-            agc = self._read_byte(self.REG_AGC)
-            magnitude = self._read_word(self.REG_MAGNITUDE)
+            self._select_mux_channel()
+            bus = self._get_bus()
+            status = bus.read_byte_data(self.AS5600_ADDR, self.REG_STATUS)
+            agc = bus.read_byte_data(self.AS5600_ADDR, self.REG_AGC)
+            mag_high = bus.read_byte_data(self.AS5600_ADDR, self.REG_MAGNITUDE)
+            mag_low = bus.read_byte_data(self.AS5600_ADDR, self.REG_MAGNITUDE + 1)
+            magnitude = (mag_high << 8) | mag_low
             
             detected = bool(status & self.STATUS_MAGNET_DETECTED)
             too_strong = bool(status & self.STATUS_MAGNET_TOO_STRONG)
@@ -262,8 +209,10 @@ class PiAS5600Encoder(EncoderInterface):
         return True
     
     def close(self) -> None:
-        """Close connections."""
         self._mux.close()
+        if self._bus is not None:
+            self._bus.close()
+            self._bus = None
     
     def __enter__(self):
         return self

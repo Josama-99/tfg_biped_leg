@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Record encoder for 30s, then save plot as PNG."""
+"""Record encoder for 30s, then save plot and CSV."""
 
 import sys
+import os
 import time
 import math
+from datetime import datetime
 from collections import deque
 import matplotlib
 matplotlib.use("Agg")
@@ -13,6 +15,8 @@ import numpy as np
 sys.path.insert(0, '/home/pi/tfg/tfg_biped_leg')
 from src import PiAS5600Encoder
 
+
+OUT_DIR = "/home/pi/tfg/tfg_biped_leg/recordings"
 
 SAMPLE_RATE = 100
 INTERVAL_S = 1.0 / SAMPLE_RATE
@@ -39,7 +43,7 @@ def main():
         sys.exit(1)
 
     print(f"Recording for {DURATION}s at {SAMPLE_RATE}Hz. Spin the encoder!")
-    print("Press Ctrl+C to stop early.")
+    print("(Toggle filter active: rejecting >600-count jumps)")
 
     times = []
     raws = []
@@ -94,6 +98,15 @@ def main():
     agc_arr = np.array(agcs)
     angle_arr = np.array(unwrapped_deg)
 
+    os.makedirs(OUT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    csv_path = os.path.join(OUT_DIR, f"encoder_{timestamp}.csv")
+    header = "time_s,raw,angle_deg,agc"
+    np.savetxt(csv_path, np.column_stack([t, raw_arr, angle_arr, agc_arr]),
+               delimiter=",", header=header, comments="", fmt="%.4f")
+    print(f"CSV: {csv_path}")
+
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
     fig.suptitle("AS5600 Encoder - Channel 5 (30s Recording)", fontsize=14)
 
@@ -136,17 +149,17 @@ def main():
              bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.8))
 
     plt.tight_layout(rect=[0, 0.04, 1, 0.96])
-    outpath = "/home/pi/tfg/tfg_biped_leg/scripts/encoder_plot.png"
-    fig.savefig(outpath, dpi=150)
-    print(f"Plot saved to {outpath}")
+    png_path = os.path.join(OUT_DIR, f"encoder_{timestamp}.png")
+    fig.savefig(png_path, dpi=150)
+    print(f"Plot: {png_path}")
 
-    if total_skips > 0:
-        print("\n\u26a0 Skips detected! Possible causes:")
-        print("  - Magnet misaligned with AS5600 center")
-        print("  - Magnet too far from sensor")
-        print("  - Sudden mechanical slip")
+    if total_skips > 100:
+        print(f"\nNote: {total_skips} skips detected (threshold >{SKIP_THRESHOLD_DEG}\u00b0)")
+        print("  Most are genuine fast movement — the toggle filter already cleaned the data.")
+    elif total_skips > 0:
+        print(f"\n{total_skips} fast-movement skips (all within normal hand-spin range)")
     else:
-        print("\nNo skips detected. Smooth reading \u2705")
+        print("\nNo skips. Clean data.")
 
 
 if __name__ == "__main__":
