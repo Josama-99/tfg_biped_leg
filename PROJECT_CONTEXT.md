@@ -343,6 +343,9 @@ Makerbase board on hold until recovery solution found.
 
 See also: https://github.com/makerbase-mks/ODrive-MKS
 
+### Resources
+- ODrive v0.5.6 `odrivetool` docs (firmware update & troubleshooting): https://docs.odriverobotics.com/v/0.5.6/odrivetool.html#troubleshooting
+
 ---
 
 ## Reference Repositories
@@ -360,6 +363,8 @@ See also: https://github.com/makerbase-mks/ODrive-MKS
   - ROS2 integration
 - **Makerbase ODrive**: https://github.com/makerbase-mks/ODrive-MKS
   - Chinese clone firmware
+- **ODrive v0.5.6 Firmware Update Docs**: https://docs.odriverobotics.com/v/0.5.6/odrivetool.html#device-firmware-update
+  - Troubleshooting, forcing DFU mode, alternative DFU tools, ST-Link flashing
 
 ---
 
