@@ -240,7 +240,7 @@ The Makerbase ODrive clone (M1 M22015) is stuck in DFU mode:
 
 ## Future Work
 - [ ] Fix Makerbase ODrive firmware
-- [ ] Test encoder reading
+- [x] Test encoder reading ✅
 - [ ] Integrate encoder feedback with motor control
 - [ ] Verify kinematics with physical leg
 - [ ] Add more motors (expand to 3-DOF)

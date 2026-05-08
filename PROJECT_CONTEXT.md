@@ -183,7 +183,7 @@ motor_turns = joint_turns × 16
 - [x] Firmware downloaded ✅
 - [x] Multiple firmware flash attempts - board bricked ⚠️
 - [ ] Recover Makerbase ODrive (needs ST-Link)
-- [ ] Test encoder reading (future)
+- [x] Test encoder reading ✅ (2026-05-08)
 - [ ] Integrate encoder with motor control (future)
 - [ ] Add more motors (expand to 3-DOF)
 
@@ -204,7 +204,7 @@ motor_turns = joint_turns × 16
 | Unit Tests | ✅ | Kinematics tests |
 | EncoderInterface (Base) | ✅ | Abstract base class |
 | TCA9548A Driver | ✅ | I2C mux helper |
-| PiAS5600Encoder | ✅ | Pi I2C implementation (future) |
+| PiAS5600Encoder | ✅ | Pi I2C implementation (working on ch5) |
 | SerialEncoder | ✅ | Placeholder for future |
 | EncoderManager | ✅ | Factory for multiple encoders |
 | Makerbase ODrive Support | 🔧 In Progress | Needs testing |
@@ -245,7 +245,7 @@ sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 /home/pi/tfg/odrive_test.py
 - [ ] Connect Makerbase ODrive via USB
 - [ ] Test Makerbase connection and verify device path
 - [ ] Check Makerbase firmware version
-- [ ] Test encoder reading (future)
+- [x] Test encoder reading ✅
 - [ ] Integrate encoder with motor control (future)
 
 ### Medium Priority
@@ -264,7 +264,7 @@ sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 /home/pi/tfg/odrive_test.py
 
 1. [x] Project setup (code downloaded)
 2. [x] Set ODrive USB permissions
-3. [ ] Enable I2C on Pi (`sudo raspi-config` → Interface → I2C)
+ 3. [x] Enable I2C on Pi (`sudo raspi-config` → Interface → I2C) ✅
 4. [x] Install dependencies (pip install odrive numpy smbus2 pyyaml)
 5. [x] Connect Official ODrive via USB
 6. [x] Run motor calibration
@@ -272,9 +272,9 @@ sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 /home/pi/tfg/odrive_test.py
 8. [ ] Connect Makerbase ODrive via USB
 9. [ ] Verify Makerbase device path (dmesg | grep tty)
 10. [ ] Test Makerbase connection
-11. [ ] Connect TCA9548A and verify with `sudo i2cdetect -y 1`
-12. [ ] Connect AS5600 encoders to mux channels (0=Hip1, 1=Hip2, 2=Knee)
-13. [ ] Test encoder reading (`python3 scripts/test_encoders.py`)
+11. [x] Connect TCA9548A and verify with `sudo i2cdetect -y 1` ✅
+12. [x] Connect AS5600 encoder to mux channel 5 ✅
+13. [x] Test encoder reading (`python3 scripts/test_encoders.py --channels 5`) ✅
 14. [ ] Integrate encoder feedback with motor control
 
 ---
@@ -359,6 +359,13 @@ See also: https://github.com/makerbase-mks/ODrive-MKS
 ---
 
 ## Change Log
+
+### 2026-05-08
+- TCA9548A I2C multiplexer verified working
+- AS5600 encoder tested on mux channel 5
+- Live plotting script created (plot_encoder.py)
+- Encoder reads angle + magnet status successfully via smbus2
+- Encoder skips detected (likely magnet misalignment - needs investigation)
 
 ### 2026-04-27 (continued)
 - Board remains bricked: detected in DFU mode but not in RUN mode

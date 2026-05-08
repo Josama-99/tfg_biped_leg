@@ -22,7 +22,7 @@ Author: tfg_biped_leg
 import sys
 import time
 import argparse
-sys.path.insert(0, '/home/pi/TFG')
+sys.path.insert(0, '/home/pi/tfg/tfg_biped_leg')
 
 from src import EncoderManager, TCA9548A, EncoderError
 
@@ -162,7 +162,7 @@ def test_encoder_manager():
     try:
         import yaml
         
-        with open('/home/pi/TFG/config/encoder.yaml') as f:
+        with open('/home/pi/tfg/tfg_biped_leg/config/encoder.yaml') as f:
             config = yaml.safe_load(f)
         
         manager = EncoderManager(

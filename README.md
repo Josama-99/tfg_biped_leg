@@ -10,7 +10,7 @@ This package provides control for a 3-DOF bipedal robot leg using:
 - **TCA9548A** I2C multiplexer
 - **AS5600** magnetic encoders for joint position sensing
 
-**Current Status**: Official ODrive working ✅, Makerbase BRICKED ⚠️
+**Current Status**: Official ODrive working ✅, TCA9548A + AS5600 encoder reading ✅, Makerbase BRICKED ⚠️
 
 ## Architecture
 
