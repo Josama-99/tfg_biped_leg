@@ -170,9 +170,11 @@ tfg_biped_leg/
 │   ├── leg_kinematics.py       # FK/IK
 │   └── trajectory_generator.py  # Gait patterns
 ├── scripts/                    # Utility scripts
-│   ├── test_single_motor.py    # Single motor test
+│   ├── calibrate_encoder.py    # Encoder calibration + motor control
 │   ├── calibrate_motors.py     # Motor calibration
-│   └── odrive_test.py          # Interactive test menu
+│   ├── odrive_test.py          # Interactive test menu
+│   ├── test_encoders.py        # AS5600 encoder test suite
+│   └── test_single_motor.py    # Single motor test
 └── tests/                      # Unit tests
 ```
 
@@ -220,22 +222,21 @@ The AS5600 is an **absolute encoder** (12-bit, 0-4096 per revolution). Since eac
 
 **Note:** The specific AS5600 unit on channel 5 has an internal CORDIC instability that produces ~215° toggles and periodic ~40° drops. The driver compensates with a median-3 read + jump rejection filter (`JUMP_THRESHOLD = 300`). If replacing the encoder, this can be disabled.
 
-**Calibration (one-time, per joint):**
-1. Manually move joint to mechanical limit A, record AS5600 raw → `limit_min`
-2. Manually move joint to mechanical limit B, record AS5600 raw → `limit_max`
-3. Store limits in a config file
+**Calibration (`scripts/calibrate_encoder.py`):**
+1. **Manual limits** — Move joint by hand, press `1`/`2`/`3` to record AS5600 raw at limit_min, middle, limit_max.
+2. **Auto-calibrate (`a`)** — Script probes motor direction, then slowly approaches each AS5600 limit at 0.3 turns/s. Stops when encoder is within `SAFETY_MARGIN` (50 counts) of the limit, or when motor velocity ≈ 0 for 2s (hit hard stop). Records ODrive motor turns at both limits.
+3. **Save (`w`)** — Writes `config/encoder_calibration.yaml` with both encoder raw values and ODrive motor positions. Overwrites on each save.
+4. **Oscillate (`o`)** — Sweeps motor between the calibrated motor limits at configurable speed and cycle count.
+
+**Modular arithmetic:** Uses `raw_distance()` to find shortest-path on the 0-4095 circle, so limits that cross the 0/4095 boundary work correctly.
 
 **Homing (every startup):**
 1. Read AS5600 raw value for each joint
-2. Map to joint angle:
-   ```
-   joint_deg = (raw - limit_min) / (limit_max - limit_min) * range_deg + range_start
-   ```
-3. Convert to ODrive motor turns: `motor_turns = joint_deg / 360 * GEAR_RATIO`
-4. Set ODrive position setpoint to current position — the robot knows its pose without moving
+2. Map to joint angle via stored limits
+3. Set ODrive position setpoint — the robot knows its pose without moving
 
-**Virtual end stops (during operation):**
-- Before every move, clamp target position within recorded limits
+**Virtual end stops:**
+- Motor position targets are bounded by `motor_pos_min` / `motor_pos_max`
 - No physical limit switches needed
 
 ## Testing the ODrive
@@ -262,11 +263,55 @@ Menu options:
 | 10 | Live position plot |
 | 0 | Exit |
 
+### Calibration Script Menu (calibrate_encoder.py)
+
+| Option | Description |
+|--------|-------------|
+| 1/2/3 | Record encoder raw at limit_min / middle / limit_max |
+| m | Connect ODrive |
+| d | Disconnect ODrive |
+| a | Auto-calibrate: discover ODrive motor positions at encoder limits |
+| o | Oscillate motor between calibrated limits |
+| p | Move motor to position (turns) |
+| +/- | Step ±0.1 turns |
+| w | Save to YAML (overwrites) |
+| s/c/q | Show / Clear / Quit |
+
 ### How to Make Motor Turn
 
 1. **Select option 6** → Enable closed loop control
 2. **Select option 8** → Set position control
 3. **Select option 9** → Enter value (e.g., 0.5 for half turn)
+
+---
+
+### Calibration Tool (`scripts/calibrate_encoder.py`)
+
+Combined encoder calibration + motor control script.
+
+```
+Usage:
+    sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 scripts/calibrate_encoder.py
+
+Menu:
+  1/2/3  — Record encoder raw at limit_min / middle / limit_max (move by hand)
+  m      — Connect ODrive (uses odrive.find_any(), no re-calibration)
+  a      — Auto-calibrate: motor slowly approaches each AS5600 limit, records ODrive turns
+  o      — Oscillate motor between calibrated limits
+  p      — Move motor to position (turns)
+  +/-    — Step ±0.1 turns
+  w      — Save calibration to config/encoder_calibration.yaml
+  s/c/q  — Show / Clear / Quit
+
+Auto-calibrate safety:
+  - Uses position control only (no velocity mode switching — avoids glitchy state)
+  - Direction probe: commands +0.5 turns, checks encoder direction
+  - Approach: ramps position in 0.06-turn steps every 200ms (~0.3 turns/s)
+  - Modular arithmetic handles AS5600 0/4095 wrap
+  - SAFETY_MARGIN=50 counts (~4.4°) stops motor before reaching hard stop
+  - Stall detection: velocity <0.01 turns/s for 2s = hard stop reached
+  - Ctrl+C aborts at any time
+```
 
 ## Chinese ODrive (Makerbase M1 M22015) - Firmware Issue
 

@@ -1,0 +1,11 @@
+calibration:
+  joint_name: joint_1
+  limit_max: 988
+  limit_mid: 3954
+  limit_min: 2976
+  margin: 50
+  motor_pos_max: null
+  motor_pos_min: null
+  mux_channel: 5
+  range: 1988
+  timestamp: '2026-05-10T12:00:29.294253'

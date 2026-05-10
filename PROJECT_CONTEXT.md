@@ -143,9 +143,16 @@ The AS5600 absolute encoder replaces physical limit switches:
 - So each AS5600 value maps uniquely to a joint angle with no ambiguity
 
 **Procedure:**
-1. **Calibration** (one-time): Manually move each joint to its mechanical limits, record AS5600 raw values
-2. **Homing** (every startup): Read AS5600 → map to joint angle via stored limits → set ODrive position setpoint (robot knows its pose without moving)
-3. **Virtual end stops** (runtime): Clamp all position targets within the recorded limits
+1. **Manual calibration** (one-time): Move joint by hand to limit 1, middle, limit 2. Record AS5600 raw values.
+2. **Auto-calibrate** (one-time, `a` key in `calibrate_encoder.py`): Script probes motor direction, then slowly moves the motor toward each AS5600 limit until either (a) the encoder reads within `SAFETY_MARGIN` of the limit, or (b) the motor stalls (velocity ≈0 for 2s = hit hard stop). ODrive motor turns are recorded for both limits.
+3. **Homing** (every startup): Read AS5600 → map to joint angle via stored limits → set ODrive position setpoint.
+4. **Virtual end stops** (runtime): Clamp all position targets within the recorded motor limits.
+5. **Oscillation** (`o` key in `calibrate_encoder.py`): Sweep motor between `motor_pos_min` and `motor_pos_max` at configurable speed/cycles for testing.
+
+**Key details:**
+- **Modular arithmetic** (`raw_distance()`): Handles AS5600 0/4095 wrap if the mechanical range crosses the boundary. All distance calculations use shortest-path on the circle.
+- **Safety margin** (50 counts, ~4.4°): The motor stops approaching when encoder is within this margin of the recorded limit, preventing wear against hard stops.
+- **Stall detection**: If motor velocity is below `STALL_VEL_THRESHOLD` (0.01 turns/s) for `STALL_TIMEOUT` (2s), the motor has hit the physical limit. The current motor position is recorded as the limit value.
 
 ---
 
@@ -261,12 +268,14 @@ sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 /home/pi/tfg/odrive_test.py
 - [ ] Test Makerbase connection and verify device path
 - [ ] Check Makerbase firmware version
 - [x] Test encoder reading ✅
-- [ ] Integrate encoder with motor control (future)
+- [x] Encoder + motor integration (calibrate_encoder.py) ✅
 
 ### Medium Priority
 - [ ] Verify kinematics with physical leg
 - [ ] Add motors and expand to 3-DOF
 - [ ] Implement closed-loop position control with encoder feedback
+- [ ] Handle AS5600 wrap-around with modular arithmetic (implemented in calibrate_encoder.py)
+- [ ] Add stall detection as safety backstop in auto-calibrate (implemented in calibrate_encoder.py)
 
 ### Low Priority
 - [ ] Create walking gait trajectories
@@ -290,7 +299,11 @@ sudo /home/pi/tfg/tfg_biped_leg/tfg_venv/bin/python3 /home/pi/tfg/odrive_test.py
 11. [x] Connect TCA9548A and verify with `sudo i2cdetect -y 1` ✅
 12. [x] Connect AS5600 encoder to mux channel 5 ✅
 13. [x] Test encoder reading (`python3 scripts/test_encoders.py --channels 5`) ✅
-14. [ ] Integrate encoder feedback with motor control
+14. [x] Encoder + motor control (calibrate_encoder.py) ✅
+    1. Record 3 manual encoder limits (1/2/3 keys)
+    2. Connect ODrive (`m` key)
+    3. Auto-calibrate motor positions (`a` key)
+    4. Oscillate safely between limits (`o` key)
 
 ---
 
@@ -379,6 +392,17 @@ See also: https://github.com/makerbase-mks/ODrive-MKS
 ---
 
 ## Change Log
+
+### 2026-05-10
+- Created `scripts/calibrate_encoder.py` — integrated encoder calibration + ODrive motor control
+- Two-stage calibration: manual encoder limits → auto motor mapping via stall detection
+- Auto-calibrate (`a`): probes direction using position control (+0.5 turns), then ramps position in 0.06-turn steps at 0.3 turns/s toward each AS5600 limit. Detects stall (velocity < 0.01 turns/s for 2s) as hard-stop backstop.
+- Fix: switched from velocity control to position-only control for auto-calibrate. Velocity mode leaves `input_vel` state which can glitch; position ramping is reliable and doesn't require mode switching.
+- Oscillation mode (`o`): sweeps motor between calibrated limits at configurable speed/cycles
+- Modular arithmetic (`raw_distance()`) handles AS5600 0/4095 wrap for cross-boundary ranges
+- Manual position control (`p`), fine stepping (`+`/`-`), safety margin (50 counts)
+- ODrive connects directly (`odrive.find_any()`) bypassing IOdrive to avoid re-calibration
+- YAML saves both encoder raw values and ODrive motor positions (overwritable)
 
 ### 2026-05-08
 - Fixed AS5600 CORDIC toggle (215° chip-level jumps) → median-3 + jump threshold filter
