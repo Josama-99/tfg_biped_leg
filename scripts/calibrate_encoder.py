@@ -170,14 +170,16 @@ def approach_any_limit(enc, odrv, limit_min, limit_max, direction_sign):
 
     for step in range(max_steps):
         raw, _ = read_encoder(enc)
-        if raw is not None:
+        if step >= 5 and raw is not None:
             if is_near_limit(raw, limit_min):
                 hit_label = 'min'
                 reached = True
+                print(f"  → Stopped: RAW={raw}, limit_min={limit_min}, Δ={raw_distance(raw, limit_min)}")
                 break
             if is_near_limit(raw, limit_max):
                 hit_label = 'max'
                 reached = True
+                print(f"  → Stopped: RAW={raw}, limit_max={limit_max}, Δ={raw_distance(raw, limit_max)}")
                 break
 
         ramp_pos += direction_sign * RAMP_STEP
@@ -234,8 +236,15 @@ def oscillate(odrv, pos_min, pos_max, cycles=0, speed=1.0):
     odrv.axis1.controller.config.control_mode = CTRL_MODE_POSITION
     odrv.axis1.controller.config.vel_limit = speed
 
+    def wait_for_reach(target, timeout=30):
+        start = time.time()
+        while time.time() - start < timeout:
+            if abs(odrv.axis1.encoder.pos_estimate - target) < 0.05:
+                return True
+            time.sleep(0.02)
+        return False
+
     count = 0
-    travel_time = abs(pos_max - pos_min) / speed
     print(f"\n  Oscillating: {pos_min:.2f} ↔ {pos_max:.2f} turns (speed={speed} turns/s)")
     print("  Ctrl+C to stop.\n")
 
@@ -244,10 +253,14 @@ def oscillate(odrv, pos_min, pos_max, cycles=0, speed=1.0):
             count += 1
 
             odrv.axis1.controller.input_pos = pos_min
-            time.sleep(travel_time * 0.6)
+            if not wait_for_reach(pos_min):
+                print("  ⚠ Timeout reaching limit, stopping.")
+                break
 
             odrv.axis1.controller.input_pos = pos_max
-            time.sleep(travel_time * 0.6)
+            if not wait_for_reach(pos_max):
+                print("  ⚠ Timeout reaching limit, stopping.")
+                break
 
     except KeyboardInterrupt:
         print("\n  Oscillation stopped.")

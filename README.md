@@ -304,13 +304,16 @@ Menu:
   s/c/q  — Show / Clear / Quit
 
 Auto-calibrate safety:
-  - Uses position control only (no velocity mode switching — avoids glitchy state)
+  - Uses position control only (no velocity mode switching)
   - Direction probe: commands +0.5 turns, checks encoder direction
-  - Approach: ramps position in 0.06-turn steps every 200ms (~0.3 turns/s)
+  - Approach: ramps position in 0.03-turn steps every 200ms (~0.15 turns/s)
+  - Checks distance to BOTH limits on each step — stops at whichever is within margin
+  - First 5 steps skip limit-checking to prevent false re-trigger on the same limit
+  - Oscillation waits for motor to actually reach each target (0.05-turn tolerance) before reversing
   - Modular arithmetic handles AS5600 0/4095 wrap
-  - SAFETY_MARGIN=50 counts (~4.4°) stops motor before reaching hard stop
-  - Stall detection: velocity <0.01 turns/s for 2s = hard stop reached
+  - SAFETY_MARGIN=100 counts (~8.8°) stops motor before reaching hard stop
   - Ctrl+C aborts at any time
+  - Press `e` to print ODrive error codes
 ```
 
 ## Chinese ODrive (Makerbase M1 M22015) - Firmware Issue

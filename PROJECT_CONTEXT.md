@@ -394,10 +394,15 @@ See also: https://github.com/makerbase-mks/ODrive-MKS
 ## Change Log
 
 ### 2026-05-10
-- Created `scripts/calibrate_encoder.py` — integrated encoder calibration + ODrive motor control
-- Two-stage calibration: manual encoder limits → auto motor mapping via stall detection
-- Auto-calibrate (`a`): probes direction using position control (+0.5 turns), then ramps position in 0.06-turn steps at 0.3 turns/s toward each AS5600 limit. Detects stall (velocity < 0.01 turns/s for 2s) as hard-stop backstop.
-- Fix: switched from velocity control to position-only control for auto-calibrate. Velocity mode leaves `input_vel` state which can glitch; position ramping is reliable and doesn't require mode switching.
+- `calibrate_encoder.py` — multiple fixes:
+  - Auto-calibrate now checks distance to BOTH limits on each step (`approach_any_limit`)
+  - Skip first 5 steps of limit-checking to avoid false re-trigger on the same limit when reversing direction
+  - Added `print_odrive_errors()` + `e` key and error display in status
+  - Removed stall detection (was false-triggering mid-range)
+  - Oscillation (`o`) now polls `pos_estimate` with 0.05-turn tolerance instead of fixed timer — motor actually arrives at each limit before reversing
+  - Reduced ramp speed to 0.03 turns/step (0.15 turns/s) for precise limit approach
+  - `connect_odrive()` now runs full calibration sequence before closed-loop (fixes motor not moving)
+  - SAFETY_MARGIN set to 100 counts (~8.8°)
 - Oscillation mode (`o`): sweeps motor between calibrated limits at configurable speed/cycles
 - Modular arithmetic (`raw_distance()`) handles AS5600 0/4095 wrap for cross-boundary ranges
 - Manual position control (`p`), fine stepping (`+`/`-`), safety margin (50 counts)
