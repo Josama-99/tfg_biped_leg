@@ -162,13 +162,13 @@ def detect_motor_direction(enc, odrv, limit_min, limit_max):
 
 
 def approach_any_limit(enc, odrv, limit_min, limit_max, direction_sign):
-    """Ramp in direction_sign, stop when EITHER limit is approached or stall."""
+    """Ramp in direction_sign, stop when EITHER limit is approached or max steps."""
     ramp_pos = odrv.axis1.encoder.pos_estimate
-    stall_start = None
-    reached = False
     hit_label = None
+    reached = False
+    max_steps = 1500
 
-    while True:
+    for step in range(max_steps):
         raw, _ = read_encoder(enc)
         if raw is not None:
             if is_near_limit(raw, limit_min):
@@ -179,19 +179,6 @@ def approach_any_limit(enc, odrv, limit_min, limit_max, direction_sign):
                 hit_label = 'max'
                 reached = True
                 break
-
-        vel = abs(odrv.axis1.encoder.vel_estimate)
-        if vel < STALL_VEL_THRESHOLD:
-            if stall_start is None:
-                stall_start = time.time()
-            elif time.time() - stall_start > STALL_TIMEOUT:
-                if raw is not None:
-                    d_min = abs(raw_distance(raw, limit_min))
-                    d_max = abs(raw_distance(raw, limit_max))
-                    hit_label = 'min' if d_min < d_max else 'max'
-                break
-        else:
-            stall_start = None
 
         ramp_pos += direction_sign * RAMP_STEP
         odrv.axis1.controller.input_pos = ramp_pos
@@ -266,6 +253,17 @@ def oscillate(odrv, pos_min, pos_max, cycles=0, speed=1.0):
         print("\n  Oscillation stopped.")
 
 
+def print_odrive_errors(odrv):
+    if odrv is None:
+        print("  No ODrive connected.")
+        return
+    print(f"  Axis1 error: {odrv.axis1.error:#010x}")
+    print(f"  Motor error: {odrv.axis1.motor.error:#010x}")
+    print(f"  Encoder error: {odrv.axis1.encoder.error:#010x}")
+    print(f"  Controller error: {odrv.axis1.controller.error:#010x}")
+    print(f"  Axis1 state: {odrv.axis1.current_state}")
+
+
 def show_status(enc, odrv, limit_min, limit_mid, limit_max,
                 motor_pos_min, motor_pos_max):
     raw, deg = read_encoder(enc)
@@ -277,7 +275,9 @@ def show_status(enc, odrv, limit_min, limit_mid, limit_max,
     if odrv is not None:
         try:
             mp = odrv.axis1.encoder.pos_estimate
-            print(f"  Motor:   {mp:+.4f} turns")
+            err = odrv.axis1.error
+            err_str = f"  err={err:#010x}" if err else ""
+            print(f"  Motor:   {mp:+.4f} turns{err_str}")
         except Exception:
             print("  Motor:   (error)")
 
@@ -344,6 +344,7 @@ def main():
         print("  c  — Clear all recorded values")
         print("  w  — Save to YAML")
         if odrv is not None:
+            print("  e  — Print ODrive errors")
             print("  d  — Disconnect ODrive")
             print("  p  — Move motor to position (turns)")
             print("  +  — Step +0.1 turns")
@@ -411,6 +412,9 @@ def main():
             else:
                 save_calibration(limit_min, limit_mid, limit_max,
                                  motor_pos_min, motor_pos_max)
+        elif choice == "e":
+            print("\n  ODrive errors:")
+            print_odrive_errors(odrv)
         elif choice == "m":
             if odrv is None:
                 odrv = connect_odrive()
