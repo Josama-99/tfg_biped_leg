@@ -21,15 +21,16 @@ MUX_CHANNEL = 5
 JOINT_NAME = "joint_1"
 CONFIG_PATH = "/home/pi/tfg/tfg_biped_leg/config/encoder_calibration.yaml"
 
-SAFETY_MARGIN = 50
-APPROACH_SPEED = 0.3
+SAFETY_MARGIN = 100
 STALL_VEL_THRESHOLD = 0.01
 STALL_TIMEOUT = 2.0
 ENCODER_RANGE = 4096
 
+AXIS_STATE_FULL_CALIB = 3
+AXIS_STATE_IDLE = 1
 AXIS_STATE_CLOSED_LOOP = 8
 CTRL_MODE_POSITION = 3
-RAMP_STEP = 0.06
+RAMP_STEP = 0.03
 RAMP_INTERVAL = 0.2
 
 
@@ -103,8 +104,16 @@ def connect_odrive():
         dev = odrive.find_any()
         print(f"  Connected! Serial: {dev.serial_number}")
         dev.clear_errors()
+
+        print("  Calibrating motor (axis1)...")
+        dev.axis1.requested_state = AXIS_STATE_FULL_CALIB
+        while dev.axis1.current_state != AXIS_STATE_IDLE:
+            time.sleep(0.1)
+        print("  Calibration complete.")
+
         dev.axis1.requested_state = AXIS_STATE_CLOSED_LOOP
-        time.sleep(0.5)
+        time.sleep(0.3)
+
         dev.axis1.controller.config.control_mode = CTRL_MODE_POSITION
         dev.axis1.controller.input_pos = dev.axis1.encoder.pos_estimate
         print("  Closed-loop + position control enabled.")
@@ -152,23 +161,34 @@ def detect_motor_direction(enc, odrv, limit_min, limit_max):
     return None
 
 
-def approach_limit(enc, odrv, target_limit, direction_sign):
-    """Ramp position in small steps toward target_limit until reached or stall."""
+def approach_any_limit(enc, odrv, limit_min, limit_max, direction_sign):
+    """Ramp in direction_sign, stop when EITHER limit is approached or stall."""
     ramp_pos = odrv.axis1.encoder.pos_estimate
     stall_start = None
     reached = False
+    hit_label = None
 
     while True:
         raw, _ = read_encoder(enc)
-        if raw is not None and is_near_limit(raw, target_limit):
-            reached = True
-            break
+        if raw is not None:
+            if is_near_limit(raw, limit_min):
+                hit_label = 'min'
+                reached = True
+                break
+            if is_near_limit(raw, limit_max):
+                hit_label = 'max'
+                reached = True
+                break
 
         vel = abs(odrv.axis1.encoder.vel_estimate)
         if vel < STALL_VEL_THRESHOLD:
             if stall_start is None:
                 stall_start = time.time()
             elif time.time() - stall_start > STALL_TIMEOUT:
+                if raw is not None:
+                    d_min = abs(raw_distance(raw, limit_min))
+                    d_max = abs(raw_distance(raw, limit_max))
+                    hit_label = 'min' if d_min < d_max else 'max'
                 break
         else:
             stall_start = None
@@ -178,7 +198,7 @@ def approach_limit(enc, odrv, target_limit, direction_sign):
         time.sleep(RAMP_INTERVAL)
 
     motor_pos = odrv.axis1.encoder.pos_estimate
-    return motor_pos, reached
+    return motor_pos, hit_label, reached
 
 
 def auto_calibrate(enc, odrv, limit_min, limit_max):
@@ -193,26 +213,26 @@ def auto_calibrate(enc, odrv, limit_min, limit_max):
         if toward_min is None:
             return None, None
 
-        first_limit = limit_min if toward_min else limit_max
         first_sign = 1 if toward_min else -1
-        first_label = "min" if toward_min else "max"
-        print(f"\n  Moving toward limit_{first_label}...")
-        pos1, reached1 = approach_limit(enc, odrv, first_limit, first_sign)
-        print(f"  limit_{first_label} → motor: {pos1:.4f} turns "
+        print(f"\n  Moving toward first limit...")
+        pos1, label1, reached1 = approach_any_limit(enc, odrv, limit_min, limit_max, first_sign)
+        print(f"  limit_{label1} → motor: {pos1:.4f} turns "
               f"({'reached' if reached1 else 'STALL'})")
 
-        second_limit = limit_max if toward_min else limit_min
         second_sign = -1 * first_sign
-        second_label = "max" if toward_min else "min"
-        print(f"\n  Moving toward limit_{second_label}...")
-        pos2, reached2 = approach_limit(enc, odrv, second_limit, second_sign)
-        print(f"  limit_{second_label} → motor: {pos2:.4f} turns "
+        print(f"\n  Moving toward second limit...")
+        pos2, label2, reached2 = approach_any_limit(enc, odrv, limit_min, limit_max, second_sign)
+        print(f"  limit_{label2} → motor: {pos2:.4f} turns "
               f"({'reached' if reached2 else 'STALL'})")
 
         odrv.axis1.controller.input_pos = odrv.axis1.encoder.pos_estimate
 
-        motor_pos_min = pos1 if first_limit == limit_min else pos2
-        motor_pos_max = pos2 if first_limit == limit_min else pos1
+        motor_pos_min = pos1 if label1 == 'min' else pos2 if label2 == 'min' else None
+        motor_pos_max = pos2 if label2 == 'max' else pos1 if label1 == 'max' else None
+
+        if None in (motor_pos_min, motor_pos_max):
+            print("  ⚠ Could not determine both motor limits.")
+            return None, None
 
         print(f"\n  ✅ Motor limits: min={motor_pos_min:.4f}, max={motor_pos_max:.4f}")
         return motor_pos_min, motor_pos_max
