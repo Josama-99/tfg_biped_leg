@@ -159,7 +159,9 @@ The AS5600 absolute encoder replaces physical limit switches:
 ## Joint Definitions
 
 ### 3-DOF Leg Configuration (No Ankle, Ball Foot)
-Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended leg points in -Z.
+
+The physical robot frame uses: X = forward, Y = right, Z = down.  
+The DH base frame is: Z₀ = forward (hip abduction axis), X₀ = down, Y₀ = right.
 
 | Joint | Rotation Axis | ODrive | Motor Axis | Z Offset (from Hip Mount) | Encoder | Typical Range | Gearbox |
 |-------|---------------|-------|------------|---------------------------|---------|---------------|---------|
@@ -168,9 +170,35 @@ Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended le
 | Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | AS5600 #3 | -90° to 0° (-1.57 to 0 rad) | 16:1 |
 | Ball Foot | - | - | - | -740mm (-0.74m) | - | - | - |
 
-Link lengths: L1=0.04m (Hip1→Hip2), L2=0.35m (Hip2→Knee), L3=0.35m (Knee→Foot), Total hip-to-foot: 0.74m.
+Link lengths: L₀=0.04m (Hip1→Hip2), L₁=0.35m (Hip2→Knee), L₂=0.35m (Knee→Foot), Total hip-to-foot: 0.74m.
 
 > **Note**: Joint assignments verified. Official ODrive controls 1 motor (Hip1), Makerbase controls 2 motors (Hip2 + Knee).
+
+### Denavit-Hartenberg Parameters
+
+Z₀ is chosen as forward (aligned with hip abduction axis) rather than vertical, because standard DH requires Zᵢ as the joint axis. Hip abduction rotates about the forward direction, so Z₀ = forward. At home the leg hangs straight down, so X₀ = down. α₀ = +90° rotates Z₀ → Z₁ (lateral, hip flexion axis). α₂ = −90° rotates Z₂ (lateral) back to Z₃ ≈ forward, matching the base frame orientation.
+
+| i | aᵢ₋₁ (mm) | αᵢ₋₁ | dᵢ (mm) | θᵢ |
+|---|---|---|---|---|
+| 1 | L₀ = 40  | +90°  | 0 | θ₁ (hip abduction) |
+| 2 | L₁ = 350 | 0°    | 0 | θ₂ (hip flexion) |
+| 3 | L₂ = 350 | −90°  | 0 | θ₃ (knee flexion) |
+
+### Forward Kinematics
+
+In the physical robot frame (X=forward, Y=right, Z=down):
+
+```
+x_fwd   = L₁·sin(θ₂) + L₂·sin(θ₂+θ₃)
+y_right = (L₀ + L₁·cos(θ₂) + L₂·cos(θ₂+θ₃))·sin(θ₁)
+z_down  = (L₀ + L₁·cos(θ₂) + L₂·cos(θ₂+θ₃))·cos(θ₁)
+```
+
+At home (θ₁=θ₂=θ₃=0): (x, y, z) = (0, 0, L₀+L₁+L₂) = (0, 0, 740) mm.
+
+### URDF Model
+
+The Onshape assembly is exported to `urdf/robot.urdf` (ROS coordinates: X=forward, Y=left, Z=up). All joints use `<axis xyz="0 0 1"/>` in the child frame; the rpy of each joint origin defines the axis direction in the parent frame. See `scripts/dh_kinematics.py` for the numeric comparison between URDF-based FK and the simplified DH model.
 
 ### Gearbox Conversion
 

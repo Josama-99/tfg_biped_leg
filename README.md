@@ -204,6 +204,43 @@ Default settings (`config/my_config.json`):
 
 Link lengths: L1=0.04m, L2=0.35m, L3=0.35m, Total: 0.74m hip-to-foot.
 
+## URDF Model
+
+The robot geometry is exported from Onshape via `onshape-to-robot` and stored in `urdf/`:
+
+```
+urdf/
+├── robot.urdf       # Full bipedal robot with 6 joints (right + left leg)
+├── config.json      # Onshape document URL for regeneration
+└── assets/          # STL mesh files for visualization
+```
+
+The URDF uses standard ROS coordinates (X=forward, Y=left, Z=up). All joints have `<axis xyz="0 0 1"/>` in their child frame, with the rpy rotation defining the joint axis direction in the parent frame.
+
+## Kinematics
+
+### Coordinate Convention
+The physical robot frame is: X = forward, Y = right, Z = down.  
+The DH base frame is: Z₀ = forward (hip abduction axis), X₀ = down, Y₀ = right.
+
+### Denavit-Hartenberg Parameters
+
+| i | aᵢ₋₁ (mm) | αᵢ₋₁ | dᵢ (mm) | θᵢ |
+|---|---|---|---|---|
+| 1 | L₀ = 40  | +90°  | 0 | θ₁ (hip abduction) |
+| 2 | L₁ = 350 | 0°    | 0 | θ₂ (hip flexion) |
+| 3 | L₂ = 350 | −90°  | 0 | θ₃ (knee flexion) |
+
+### Forward Kinematics
+
+```
+x_fwd   = L₁·sin(θ₂) + L₂·sin(θ₂+θ₃)
+y_right = (L₀ + L₁·cos(θ₂) + L₂·cos(θ₂+θ₃))·sin(θ₁)
+z_down  = (L₀ + L₁·cos(θ₂) + L₂·cos(θ₂+θ₃))·cos(θ₁)
+```
+
+At home (θ₁=θ₂=θ₃=0): foot is at (0, 0, 740) mm — straight down, fully extended.
+
 ## Encoder Information
 
 ### AS5600

@@ -80,7 +80,11 @@ Control de una pierna robótica bípeda de 3-DOF usando controladores ODrive
 | I2C Address | 0x70 |
 
 ### Joint Configuration (3-DOF Leg, No Ankle)
-Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended leg points in -Z.
+
+**Physical robot frame:** X = forward, Y = right, Z = down.  
+**DH base frame:** Z₀ = forward (hip abduction axis), X₀ = down, Y₀ = right.  
+(Standard DH with Z₀ vertical cannot represent hip abduction, because α rotation only redirects Z in the Y-Z plane.)
+
 | Joint | Rotation Axis | ODrive | ODrive Axis | Z Offset (from Hip Mount) | Range | Gearbox | Encoder |
 |-------|---------------|-------|-------------|---------------------------|-------|---------|---------|
 | Hip 1 (Abduction/Adduction) | X-axis | Official ODrive | 0 | 0mm (0m) | ±45° (±0.79 rad) | 16:1 | AS5600 #1 |
@@ -88,7 +92,32 @@ Coordinate system (right leg): +X = Front, +Y = Left, +Z = Up. Fully extended le
 | Knee (Flexion/Extension) | Y-axis | Makerbase ODrive | 1 | -390mm (-0.39m) | -90° to 0° (-1.57 to 0 rad) | 16:1 | AS5600 #3 |
 | Ball Foot | - | - | - | -740mm (-0.74m) | - | - | - |
 
-Link lengths: L1=0.04m (Hip1→Hip2), L2=0.35m (Hip2→Knee), L3=0.35m (Knee→Foot), Total hip-to-foot: 0.74m.
+Link lengths: L₀=0.04m (Hip1→Hip2), L₁=0.35m (Hip2→Knee), L₂=0.35m (Knee→Foot), Total hip-to-foot: 0.74m.
+
+### Denavit-Hartenberg Parameters
+
+Z₀ = forward (abduction axis), X₀ = down (gravity direction), Y₀ = right.  
+α₀ = +90° rotates Z₀ → Z₁ (lateral, flexion axis). α₂ = −90° rotates Z₂ back to Z₃ ≈ forward.
+
+| i | aᵢ₋₁ (mm) | αᵢ₋₁ | dᵢ (mm) | θᵢ |
+|---|---|---|---|---|
+| 1 | L₀ = 40  | +90°  | 0 | θ₁ |
+| 2 | L₁ = 350 | 0°    | 0 | θ₂ |
+| 3 | L₂ = 350 | −90°  | 0 | θ₃ |
+
+A₁ = R_z(θ₁)·T_x(L₀)·R_x(+90°),  A₂ = R_z(θ₂)·T_x(L₁),  A₃ = R_z(θ₃)·T_x(L₂)·R_x(−90°)
+
+T = A₁·A₂·A₃ → foot position in DH base:
+```
+p_DH = [c₁(L₀+L₁c₂+L₂c₂₃),  s₁(L₀+L₁c₂+L₂c₂₃),  L₁s₂+L₂s₂₃]ᵀ
+```
+Physical frame (X=fwd, Y=right, Z=down):
+```
+x_fwd   = L₁·s₂ + L₂·s₂₃
+y_right = (L₀ + L₁·c₂ + L₂·c₂₃)·s₁
+z_down  = (L₀ + L₁·c₂ + L₂·c₂₃)·c₁
+```
+At home: (0, 0, 740) mm.
 
 ---
 
