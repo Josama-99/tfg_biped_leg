@@ -12,6 +12,17 @@ This package provides control for a 3-DOF bipedal robot leg using:
 
 **Current Status**: Official ODrive working ✅, TCA9548A + AS5600 encoder reading ✅ (with software filter), Makerbase BRICKED ⚠️
 
+# CAD Models
+
+The complete CAD models are available publicly on Onshape:
+
+- Full robot assembly:
+https://cad.onshape.com/documents/045d4f9be7d4b5f849aa776b/w/4ef7c623f6d94cfc82375378/e/659acbeabc324ef1581e169c?renderMode=0&uiState=6a16b3dac0d1bb5ce963e190
+
+- URDF model:
+{https://cad.onshape.com/documents/ea220f3303c98d0806fc4f15/w/99e78a21887813d82aa56a5b/e/c44cd6904376fa166963b570?renderMode=0&uiState=6a16b37032429452a874fcfe
+
+
 ## Architecture
 
 ```
