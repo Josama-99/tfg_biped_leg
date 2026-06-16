@@ -78,8 +78,7 @@ Link lengths: L1=0.04m (Hip1→Hip2), L2=0.35m (Hip2→Knee), L3=0.35m (Knee→F
 ### Future Requirements (Full Bipedal Robot - 2 Legs)
 | Component | Quantity |
 |-----------|----------|
-| Official ODrive v3.6 | 2 |
-| Makerbase ODrive M1 M22015 | 2 |
+| Makerbase ODrive M1 M22015 | 3 |
 | D5065 Motor | 6 |
 | AS5600 Encoder | 6 |
 | TCA9548A I2C Mux | 2 |
